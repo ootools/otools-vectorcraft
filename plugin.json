@@ -1,0 +1,27 @@
+{
+  "devUrl": "http://127.0.0.1:6485",
+  "developerName": "jry",
+  "displayName": "VectorCraft",
+  "displayNameCN": "矢量绘图",
+  "entry": "dist/index.html",
+  "quickDev": true,
+  "hasAd": false,
+  "icon": "✒️",
+  "inPluginPurchase": false,
+  "key": [
+    "vectorcraft",
+    "illustrator",
+    "矢量",
+    "插画",
+    "SVG",
+    "钢笔",
+    "路径",
+    "AI"
+  ],
+  "openInBrowser": false,
+  "packid": "otools-vectorcraft",
+  "screenshots": [],
+  "summary": "VectorCraft（开源、纯 Rust 重写的 Adobe Illustrator 式矢量绘图）的 OTools 插件版：钢笔贝塞尔、路径运算、渐变网格、图层与导出。",
+  "uuid": "otools-vectorcraft",
+  "version": "0.1.0"
+}
