@@ -2634,6 +2634,7 @@ dependencies = [
  "js-sys",
  "log",
  "vectorcraft-engine",
+ "vectorcraft-text",
  "vectorcraft-ui-egui",
  "wasm-bindgen",
  "wasm-bindgen-futures",

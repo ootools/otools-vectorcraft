@@ -25,6 +25,7 @@ path = "src/main.rs"
 [dependencies]
 vectorcraft-engine = { path = "../upstream/crates/engine" }
 vectorcraft-ui-egui = { path = "../upstream/crates/ui-egui" }
+vectorcraft-text = { path = "../upstream/crates/text" }
 egui = { version = "0.36", default-features = false }
 log = { version = "0.4", default-features = false }
 

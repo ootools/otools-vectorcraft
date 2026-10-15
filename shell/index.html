@@ -22,6 +22,9 @@
      * 「选文件 / 读文件 / 另存 / 写文件」换成宿主调用；WASM 侧（shell/src/otools.rs）
      * 通过 wasm-bindgen 直接调下面这几个函数。
      *
+     * 字体桥（listSystemFonts / readHostFile）也走同一套宿主通道：wasm 读不到本机字体，
+     * 而设计软件的文档内容字体要能用系统里装的任意字体；Rust 侧见 shell/src/fontbridge.rs。
+     *
      * 宿主能力有两条路，任一条通就算「在 OTools 里」：
      *   1. `window.otools` / `window.utools`：宿主注入的包装 API
      *      （dialog.open/save + readHostFile/writeHostFile）。
@@ -116,6 +119,22 @@
         var invoke = tauriInvoke();
         if (!invoke) return fail('OTools 宿主不可用');
         return invoke('tools_webview_read_file', { path: path });
+      }
+
+      // 宿主枚举的系统字体目录：`[{family, style, path, index, size}]`。
+      // 宿主只解析每个字体文件的 name 表（几 KB），字体字节仍按需走 readHostFile。
+      function listSystemFonts() {
+        var a = wrapper();
+        if (a && typeof a.listSystemFonts === 'function') return a.listSystemFonts();
+        var invoke = tauriInvoke();
+        if (!invoke) return fail('OTools 宿主不可用');
+        return invoke('tools_webview_list_fonts', {});
+      }
+
+      // 探针专用：无头验证字体桥时，注入的脚本覆盖本函数请求「解析某个族」/
+      // 「列出字体族」。正常运行时恒返回 null（Rust 侧每帧问一次，空转）。
+      function probeRequest() {
+        return window.__VECTORCRAFT_PROBE_REQUEST__ || null;
       }
 
       function writeHostFile(path, dataBase64) {
@@ -216,7 +235,7 @@
          */
         saveFile: function (request) {
           var req = request || {};
-          var name = String(req.name || 'Document.designcraft');
+          var name = String(req.name || 'Document.svg');
           if (!hostReady()) return fail('OTools 保存对话框不可用');
 
           var map = loadMap();
@@ -236,6 +255,34 @@
               return { path: path };
             });
           });
+        },
+
+        /**
+         * 系统字体目录（宿主枚举）。不在 OTools 里时 reject，由 Rust 侧忽略。
+         * @returns {Promise<Array<{family: string, style: string, path: string, index: number, size: number}>>}
+         */
+        listSystemFonts: function () {
+          if (!hostReady()) return fail('OTools 宿主不可用');
+          return listSystemFonts();
+        },
+
+        /**
+         * 读宿主磁盘文件（字体桥按路径读字体字节用；与打开文档同一条路）。
+         * @param {string} path
+         * @returns {Promise<{path: string, name: string, dataBase64: string}>}
+         */
+        readHostFile: function (path) {
+          if (!hostReady()) return fail('OTools 宿主不可用');
+          return readHostFile(String(path || ''));
+        },
+
+        /**
+         * 探针专用：无头验证字体桥的请求通道（见 shell/src/fontbridge.rs 的
+         * drain_probe_requests）。正常使用时恒返回 null；注入的脚本覆盖它。
+         * @returns {Array|null} ["resolve", family, style] / ["families", family] / null
+         */
+        probeRequest: function () {
+          return probeRequest();
         }
       };
     })();

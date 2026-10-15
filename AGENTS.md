@@ -8,6 +8,9 @@
 1. **`upstream/` 保持上游原样**。它是 `storytold/vectorcraft` 在 `upstream.pin`
    里那个 commit 的浅拉取结果，**不在 git 里**（见 `scripts/fetch-upstream.mjs`）。
    任何「顺手改一下上游」的念头都会在下次同步时丢失或变成冲突。
+   **确需裁剪上游时**：改完 `upstream/` 后用 `git diff > shell/patches/<名字>.patch`
+   收成补丁、`git checkout -f` 还原，由 `fetch-upstream.mjs` 在每次拉取后幂等重放
+   （设计软件通用能力如系统字体桥见 `shell/patches/vectorcraft-sysfonts.patch`）。
 2. `shell/src/` 里凡是标明「上游副本」的文件，不要就地改；要改行为就改
    `shell/src/otools.rs` 或 `shell/src/main.rs`。
 3. **不引入 native cdylib**。OTools 宿主已经注入了
@@ -46,9 +49,11 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `shell/index.html` | 唯一的 JS：`window.vectorcraftOtools`（available/theme/openFiles/saveFile） |
-| `shell/src/otools.rs` | 桥：`pick_open` / `pick_save` / `deliver` / 主题 |
-| `shell/src/main.rs` | 外壳：eframe 起应用、`?cpu/?webgl` 等 URL 开关 |
+| `shell/index.html` | 唯一的 JS：`window.vectorcraftOtools`（available/theme/language/openFiles/saveFile/listSystemFonts/readHostFile） |
+| `shell/src/otools.rs` | 桥：`pick_open` / `pick_save` / `deliver` / 主题 / 宿主语言 |
+| `shell/src/fontbridge.rs` | 系统字体桥：宿主字体目录 → 上游字体库，按需懒加载字节 |
+| `shell/src/main.rs` | 外壳：eframe 起应用、`?cpu/?webgl` 等 URL 开关、内嵌 fallback 字体 |
+| `shell/patches/*.patch` | 对 `upstream/` 的本地裁剪（拉取后自动重放） |
 | `upstream/` | （不在 git 里）上游源码，都是 path 依赖直接复用 |
 
 ## 常见任务
@@ -60,6 +65,8 @@
 ## 不要做的事
 
 - 不要把 `upstream/` 提交进 git（它是构建中间件，不是源码）。
-- 不要给 `upstream/` 里的 crate 打 patch、加 `cfg`、写 TODO。
+- 不要手改 `upstream/` 里的文件：本地裁剪一律走 `shell/patches/*.patch`，
+  由 `scripts/fetch-upstream.mjs` 在拉取后重放（手改会在下次同步时静默丢失——
+  补丁没打上时构建报的是「上游没有 xx 符号」这种隔层错误）。
 - 不要在本仓库跑 `cargo build` 而不管 target：外壳是 wasm-only 的，
   宿主（x86_64）下 `main()` 只会打印一行提示，别把它当编译报错。

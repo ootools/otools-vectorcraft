@@ -84,7 +84,7 @@ pub fn install(inbox: Inbox, place: PlaceInbox, ctx: egui::Context) {
     REPAINT.with(|slot| *slot.borrow_mut() = Some(ctx));
 }
 
-fn repaint() {
+pub(crate) fn repaint() {
     REPAINT.with(|slot| {
         if let Some(ctx) = slot.borrow().as_ref() {
             ctx.request_repaint();

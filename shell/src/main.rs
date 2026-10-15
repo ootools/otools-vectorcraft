@@ -6,6 +6,8 @@
 //! 1. `services()` 的 `open_async` / `place_async` / `download` 走 [`otools`]
 //! 2. 首次启动时用 OTools 的界面主题给 egui 一个初始亮度
 //! 3. 不在 OTools 里时（把 dist 拖进普通浏览器）退回浏览器下载
+//! 4. 系统字体经宿主字体桥按需装进上游字体库（见 [`fontbridge`]）：设计软件的
+//!    「文档内容字体」要能用用户系统里装的任意字体，而 wasm 读不到本机字体
 //!
 //! 上游那些纯浏览器设施没有移植：GPU 丢失重启、开机字体抓取、多标签页 Web Locks、
 //! 粘贴事件。它们在插件里没有意义（见 AGENTS.md 的「已知限制」）。
@@ -13,6 +15,9 @@
 
 #[cfg(target_arch = "wasm32")]
 mod otools;
+
+#[cfg(target_arch = "wasm32")]
+mod fontbridge;
 
 #[cfg(target_arch = "wasm32")]
 mod web {
@@ -65,6 +70,8 @@ mod web {
                 });
             }
             self.app.logic(ctx);
+            // 系统字体桥：应用要过的系统字体按需读进来（无宿主时整体静默）。
+            crate::fontbridge::poll(ctx);
             // 让插件更纯粹：吞掉所有社区/外部链接（Discord、ArtCraft 官网、上游 GitHub），
             // 点击不再跳出插件。文档内普通链接不受影响。
             ctx.output_mut(|o| {
@@ -167,6 +174,8 @@ mod web {
                             app.ui.brightness = brightness;
                         }
                         crate::otools::install(inbox.clone(), place, cc.egui_ctx.clone());
+                        // 系统字体桥：取宿主的字体目录喂进上游字体库（异步，到达后请求重绘）。
+                        crate::fontbridge::fetch_catalog();
                         Ok(Box::new(WebShell { app, inbox }))
                     }),
                 )
