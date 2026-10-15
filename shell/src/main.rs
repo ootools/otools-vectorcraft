@@ -156,6 +156,11 @@ mod web {
                         let inbox: Inbox = Inbox::default();
                         let place: PlaceInbox = PlaceInbox::default();
                         let mut app = VectorcraftApp::new(Session::new(), services(inbox.clone(), place.clone()));
+                        // wasm 读不到系统字体：内嵌 CJK + 阿拉伯 fallback，否则中文/日文/阿拉伯文方框。
+                        vectorcraft_ui_egui::theme::set_extra_fallback_fonts(vec![
+                            ("otools-cjk".into(), std::sync::Arc::new(eframe::egui::FontData::from_static(include_bytes!("../assets/fonts/otools-cjk-subset.ttf")))),
+                            ("otools-arabic".into(), std::sync::Arc::new(eframe::egui::FontData::from_static(include_bytes!("../assets/fonts/otools-arabic-subset.ttf")))),
+                        ]);
                         // 第一次打开跟随 OTools 的界面主题（插件 webview 的
                         // prefers-color-scheme 不一定等于宿主主题）。
                         if let Some(brightness) = Brightness::parse(&crate::otools::theme()) {
