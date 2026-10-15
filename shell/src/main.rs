@@ -16,8 +16,11 @@ mod otools;
 
 #[cfg(target_arch = "wasm32")]
 mod web {
+    use std::cell::{Cell, RefCell};
+
     use vectorcraft_engine::Session;
     use vectorcraft_ui_egui::{Inbox, Services, VectorcraftApp, place::PlaceInbox, theme::Brightness};
+    use wasm_bindgen::closure::Closure;
     use wasm_bindgen::JsCast as _;
 
     const CANVAS_ID: &str = "vectorcraft_canvas";
@@ -29,8 +32,23 @@ mod web {
         inbox: Inbox,
     }
 
+    thread_local! {
+        /// 宿主语言切换后，下一帧把 host locale 写进 interface_language 偏好并重渲染。
+        static NEEDS_LANG_SYNC: Cell<bool> = const { Cell::new(true) };
+        /// 缓存 egui Context，供语言切换事件触发重绘。
+        static APP_CTX: RefCell<Option<egui::Context>> = const { RefCell::new(None) };
+    }
+
     impl eframe::App for WebShell {
         fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+            APP_CTX.with(|c| *c.borrow_mut() = Some(ctx.clone()));
+            // 跟随宿主语言：切换后下一帧把 host locale 写进 interface_language 偏好（重渲染）。
+            if NEEDS_LANG_SYNC.with(|f| f.replace(false)) {
+                let code = host_lang_code(&crate::otools::host_language());
+                if self.app.session.prefs.interface_language != code {
+                    self.app.session.prefs.interface_language = code;
+                }
+            }
             let dropped = ctx.input_mut(|i| std::mem::take(&mut i.raw.dropped_files));
             for f in dropped {
                 let inbox = self.inbox.clone();
@@ -47,6 +65,14 @@ mod web {
                 });
             }
             self.app.logic(ctx);
+            // 让插件更纯粹：吞掉所有社区/外部链接（Discord、ArtCraft 官网、上游 GitHub），
+            // 点击不再跳出插件。文档内普通链接不受影响。
+            ctx.output_mut(|o| {
+                o.commands.retain(|c| match c {
+                    egui::OutputCommand::OpenUrl(u) => !crate::otools::is_community_url(&u.url),
+                    _ => true,
+                });
+            });
         }
 
         fn raw_input_hook(&mut self, _ctx: &egui::Context, raw: &mut egui::RawInput) {
@@ -140,6 +166,8 @@ mod web {
                     }),
                 )
                 .await;
+            // 监听宿主语言切换（OTools 注入的 `otools-locale-changed` 事件）。
+            install_locale_listener();
             if let Some(el) = document.get_element_by_id(LOADING_ID) {
                 match result {
                     Ok(()) => el.remove(),
@@ -147,6 +175,31 @@ mod web {
                 }
             }
         });
+    }
+
+    /// 监听宿主语言切换（OTools 注入的 `otools-locale-changed` 事件），置位标志并请求重绘；
+    /// 真正把 host locale 写进 interface_language 偏好发生在下一帧 `WebShell::logic`。
+    fn install_locale_listener() {
+        let Some(window) = web_sys::window() else { return };
+        let closure = Closure::wrap(Box::new(|| {
+            NEEDS_LANG_SYNC.with(|f| f.set(true));
+            if let Some(ctx) = APP_CTX.with(|c| c.borrow().clone()) {
+                ctx.request_repaint();
+            }
+        }) as Box<dyn FnMut()>);
+        let _ = window.add_event_listener_with_callback(
+            "otools-locale-changed",
+            closure.as_ref().unchecked_ref::<js_sys::Function>(),
+        );
+        closure.forget();
+    }
+
+    /// 把宿主的 BCP 47 locale 映射到 VectorCraft 的界面语言代码（共享 i18n 的 `Lang`）。
+    /// `lang_from_tag` 会把 `zh-CN` 正确映射成 `zh-hans`，不支持的 locale 回退英文。
+    fn host_lang_code(host: &str) -> String {
+        vectorcraft_ui_egui::i18n::lang_from_tag(host)
+            .map(|l| l.code().to_string())
+            .unwrap_or_else(|| "en".to_string())
     }
 }
 
