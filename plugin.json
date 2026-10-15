@@ -23,5 +23,5 @@
   "screenshots": [],
   "summary": "VectorCraft（开源、纯 Rust 重写的 Adobe Illustrator 式矢量绘图）的 OTools 插件版：钢笔贝塞尔、路径运算、渐变网格、图层与导出。",
   "uuid": "otools-vectorcraft",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
