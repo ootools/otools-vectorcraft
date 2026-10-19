@@ -1,0 +1,35 @@
+# VectorCraft 的 OTools 插件 native 适配层。
+#
+# 上游 `crates/mcp` 已经有完整的 headless 后端（进程内 Session，无窗口），
+# 依赖里没有 eframe/wgpu。本 crate 只做两件事：
+#   1. 把上游 `tool_definitions()` 转成宿主契约的 { tools: [...] }
+#   2. 把宿主传入的 { name, arguments } 转成上游 `call_tool(&mut Headless, ...)`
+# 业务逻辑一律复用上游，不在此重写。
+#
+# 与 `shell/` 一样是**独立 workspace**：上游 workspace 是 wasm/desktop 导向，
+# 并进来会让宿主的 cargo build 也去编译 UI 依赖。
+[package]
+name = "otools-vectorcraft-native"
+description = "VectorCraft as an OTools plugin: headless MCP backend over the upstream vectorcraft-mcp crate"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "otools_vectorcraft_native"
+
+[dependencies]
+vectorcraft-mcp = { path = "../upstream/crates/mcp" }
+serde_json = "1"
+
+# cdylib 必须可 unwind：插件 FFI 边界在插件内部捕获 panic，
+# 若 release profile 设成 abort，宿主会整体被杀（见主仓 ot-plugin-ffi 的说明）。
+[profile.release]
+panic = "unwind"
+opt-level = 3
+lto = "thin"
+codegen-units = 16
