@@ -62,12 +62,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
-name = "base64"
-version = "0.23.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
-
-[[package]]
 name = "bitflags"
 version = "2.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -182,6 +176,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "craft-docpath"
+version = "0.1.0"
+source = "git+https://github.com/storytold/craft-libs?rev=82a24b006eefa036b43c09a67fb9a3fbd17ffe63#82a24b006eefa036b43c09a67fb9a3fbd17ffe63"
+
+[[package]]
+name = "craft-pdf"
+version = "0.1.0"
+source = "git+https://github.com/storytold/craft-libs?rev=ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d#ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d"
+dependencies = [
+ "hayro-interpret",
+ "hayro-syntax",
+ "krilla",
+ "thiserror",
 ]
 
 [[package]]
@@ -329,12 +339,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b97b65636e5b9ef369943878ac74335ba1c55c1cb6adbf1e2c293c624248d693"
 
 [[package]]
-name = "fearless_simd"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3296eb97d869113eaf148a6bdf01884e90b3828ad7ae2340b0f93362fc158611"
-
-[[package]]
 name = "flate2"
 version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -382,28 +386,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "835ae9d781464a79026cde387f9cbc650c9a4909d7cf7e658b127e3c35d2f35d"
 dependencies = [
  "bytemuck",
-]
-
-[[package]]
-name = "fontconfig-parser"
-version = "0.5.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbc773e24e02d4ddd8395fd30dc147524273a83e54e0f312d986ea30de5f5646"
-dependencies = [
- "roxmltree 0.20.0",
-]
-
-[[package]]
-name = "fontdb"
-version = "0.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2660c5e9157bf76d2db1294e4a9feba604ef610819a3b591088d0d8392a3290f"
-dependencies = [
- "fontconfig-parser",
- "log",
- "memmap2",
- "slotmap",
- "tinyvec",
 ]
 
 [[package]]
@@ -465,18 +447,6 @@ dependencies = [
 
 [[package]]
 name = "harfrust"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c03d949a14aa089bbb282f7dd76a498a7f684428e4257202efc119ec010376f9"
-dependencies = [
- "bitflags",
- "bytemuck",
- "read-fonts 0.41.0",
- "smallvec",
-]
-
-[[package]]
-name = "harfrust"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "948d0741125ba89cd3e1c23e5642415b6ade7e1d29d67ba25fb925b533e989d6"
@@ -508,9 +478,9 @@ dependencies = [
 
 [[package]]
 name = "hayro-ccitt"
-version = "0.4.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2866f0d976e76497480b853d5e258dab6e4b89ecfe991124e08f15dfa8fd03ad"
+checksum = "9f4d0e94ddd48749f06bbe4e5389fb9799a0c45bcaf00495042076ef05e3241a"
 
 [[package]]
 name = "hayro-cmap"
@@ -524,9 +494,8 @@ dependencies = [
 
 [[package]]
 name = "hayro-interpret"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac9df074ff163a63864cec9b0bf640ccbff8abf4e44481df7369ce0ac172ffbe"
+version = "0.7.0"
+source = "git+https://github.com/storytold/craft-libs?rev=ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d#ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d"
 dependencies = [
  "bitflags",
  "hayro-cmap",
@@ -536,28 +505,27 @@ dependencies = [
  "phf",
  "rustc-hash",
  "siphasher",
- "skrifa 0.46.2",
+ "skrifa 0.47.0",
  "smallvec",
  "yoke",
 ]
 
 [[package]]
 name = "hayro-jbig2"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "000e025850f4592ddcaee85640db70704151f2bafd43b6f431aa5b6a2c6a35a9"
+version = "0.3.0"
+source = "git+https://github.com/storytold/craft-libs?rev=ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d#ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d"
 dependencies = [
- "fearless_simd 1.1.0",
+ "fearless_simd",
  "hayro-ccitt",
 ]
 
 [[package]]
 name = "hayro-jpeg2000"
-version = "0.4.1"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "122c5f834c37a2260b9c851bb8be685cf539b2a8b94b704a931ef7d2525d5835"
+checksum = "c75ab947623ef4ccaa7acf0579edf7cbb5a73838e3839a7be73335e522f433a1"
 dependencies = [
- "fearless_simd 1.1.0",
+ "fearless_simd",
 ]
 
 [[package]]
@@ -568,9 +536,8 @@ checksum = "885c5ef0654933139a9b9546fc2c69e18d37f38aa2520f079092b1be18f1fcaa"
 
 [[package]]
 name = "hayro-syntax"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6cdc818d8d265dcb42081d488f7599df4f73fb79e9d347ecedcd3c23809d2026"
+version = "0.7.2"
+source = "git+https://github.com/storytold/craft-libs?rev=ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d#ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d"
 dependencies = [
  "flate2",
  "hayro-ccitt",
@@ -579,6 +546,7 @@ dependencies = [
  "memchr",
  "rustc-hash",
  "smallvec",
+ "stringprep",
  "zune-jpeg",
 ]
 
@@ -745,10 +713,9 @@ checksum = "b454d911ac55068f53495488d8ccd0646eaa540c033a28ee15b07838afafb01f"
 [[package]]
 name = "krilla"
 version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27da593198b20eeba65caeb73c2bbeec3e53ab08fa549898312ce81c4fce5e33"
+source = "git+https://github.com/storytold/craft-libs?rev=ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d#ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d"
 dependencies = [
- "base64 0.22.1",
+ "base64",
  "bumpalo",
  "flate2",
  "float-cmp",
@@ -846,15 +813,6 @@ name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
-
-[[package]]
-name = "memmap2"
-version = "0.9.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1219ed1b7f229ee7104d281dd01d6802fe28bb6e95d292942c4daacdeb798c0"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "miniz_oxide"
@@ -1119,12 +1077,6 @@ dependencies = [
 
 [[package]]
 name = "roxmltree"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c20b6793b5c2fa6553b250154b78d6d0db37e72700ae35fad9387a46f487c97"
-
-[[package]]
-name = "roxmltree"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1964b10c76125c36f8afe190065a4bf9a87bf324842c05701330bba9f1cacbb"
@@ -1263,31 +1215,12 @@ dependencies = [
 
 [[package]]
 name = "skrifa"
-version = "0.46.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4febebda507fb889c545a37a135517769d1391941013561292897961d1887d6"
-dependencies = [
- "bytemuck",
- "read-fonts 0.43.3",
-]
-
-[[package]]
-name = "skrifa"
 version = "0.47.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "526e654b303ff4ad73a5a40b25de2b3ce3d039c5e3b6da5f89ae6e57004cb40f"
 dependencies = [
  "bytemuck",
  "read-fonts 0.44.0",
-]
-
-[[package]]
-name = "slotmap"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdd58c3c93c3d278ca835519292445cb4b0d4dc59ccfdf7ceadaab3f8aeb4038"
-dependencies = [
- "version_check",
 ]
 
 [[package]]
@@ -1328,6 +1261,17 @@ checksum = "23de088478b31c349c9ba67816fa55d9355232d63c3afea8bf513e31f0f1d2c0"
 dependencies = [
  "hashbrown 0.15.5",
  "serde",
+]
+
+[[package]]
+name = "stringprep"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b4df3d392d81bd458a8a621b8bffbd2302a12ffe288a9d931670948749463b1"
+dependencies = [
+ "unicode-bidi",
+ "unicode-normalization",
+ "unicode-properties",
 ]
 
 [[package]]
@@ -1487,6 +1431,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 
 [[package]]
+name = "unicode-normalization"
+version = "0.1.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75cd3fb03d5288b3ba9a1ee103ac7e9cbb59f0b03d64f8ddfcc04dd42758a85d"
+dependencies = [
+ "tinyvec",
+]
+
+[[package]]
+name = "unicode-properties"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7df058c713841ad818f1dc5d3fd88063241cc61f49f5fbea4b951e8cf5a8d71d"
+
+[[package]]
 name = "unicode-script"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1499,37 +1458,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6f5d3c3b1bf09027a88a6bc961fc00497d651009560b5463668dc81b0fa87a8"
 
 [[package]]
-name = "unicode-vo"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1d386ff53b415b7fe27b50bb44679e2cc4660272694b7b6f3326d8480823a94"
-
-[[package]]
 name = "usvg"
 version = "0.48.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "977d0a4abdef933f424a99fe09f95576e089b90aebc6f016a3bc813762493e91"
 dependencies = [
- "base64 0.23.1",
  "data-url",
  "flate2",
- "fontdb",
- "harfrust 0.12.0",
  "imagesize 0.15.0",
  "kurbo",
  "log",
  "pico-args",
- "roxmltree 0.21.1",
+ "roxmltree",
  "simplecss",
  "siphasher",
- "skrifa 0.44.0",
  "strict-num",
  "svgtypes",
  "tiny-skia-path",
- "unicode-bidi",
- "unicode-script",
- "unicode-vo",
- "xmlwriter",
 ]
 
 [[package]]
@@ -1540,7 +1485,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "vectorcraft-affinity"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -1550,7 +1495,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-brush"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "kurbo",
  "serde",
@@ -1562,7 +1507,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-cad"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "image",
  "kurbo",
@@ -1577,7 +1522,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-color"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "kurbo",
  "moxcms",
@@ -1588,8 +1533,9 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-doc"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
+ "hayro-ccitt",
  "image",
  "kurbo",
  "serde",
@@ -1603,8 +1549,9 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-effects"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
+ "image",
  "kurbo",
  "serde_json",
  "vectorcraft-doc",
@@ -1617,12 +1564,14 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-engine"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
+ "craft-docpath",
  "flate2",
  "image",
  "kurbo",
  "log",
+ "roxmltree",
  "serde",
  "serde_json",
  "thiserror",
@@ -1648,9 +1597,10 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-eps"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "flate2",
+ "hayro-ccitt",
  "image",
  "kurbo",
  "ruzstd",
@@ -1668,7 +1618,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-format"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "flate2",
  "rustix",
@@ -1680,7 +1630,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-geom"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "kurbo",
  "serde",
@@ -1689,7 +1639,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-mcp"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "image",
  "log",
@@ -1705,7 +1655,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-metafile"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "image",
  "kurbo",
@@ -1719,7 +1669,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-pathops"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "kurbo",
  "linesweeper",
@@ -1729,18 +1679,17 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-pdf"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "aes",
+ "craft-pdf",
  "flate2",
- "hayro-interpret",
- "hayro-syntax",
  "image",
  "jpeg-encoder",
- "krilla",
  "kurbo",
  "log",
  "md-5",
+ "roxmltree",
  "serde",
  "sha2",
  "skrifa 0.47.0",
@@ -1757,7 +1706,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-plugins"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -1770,7 +1719,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-render"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "flate2",
  "gif",
@@ -1790,12 +1739,13 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-scriptcheck"
-version = "0.11.0"
+version = "0.13.1"
 
 [[package]]
 name = "vectorcraft-svg"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
+ "craft-docpath",
  "flate2",
  "image",
  "kurbo",
@@ -1814,9 +1764,9 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-text"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
- "harfrust 0.13.3",
+ "harfrust",
  "icu_segmenter",
  "kurbo",
  "log",
@@ -1833,7 +1783,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-three-d"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "vectorcraft-geom",
  "vectorcraft-pathops",
@@ -1841,13 +1791,14 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-tools"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "kurbo",
  "serde",
  "serde_json",
  "vectorcraft-color",
  "vectorcraft-doc",
+ "vectorcraft-effects",
  "vectorcraft-geom",
  "vectorcraft-pathops",
  "vectorcraft-text",
@@ -1855,7 +1806,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-trace"
-version = "0.11.0"
+version = "0.13.1"
 dependencies = [
  "image",
  "kurbo",
@@ -1871,7 +1822,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbb2141a2bca6e6d598e471fd4d1d7eed8e020aad6a28187edda07f091a325dd"
 dependencies = [
  "bytemuck",
- "fearless_simd 0.4.1",
+ "fearless_simd",
  "guillotiere",
  "log",
  "peniko",
@@ -2021,12 +1972,6 @@ name = "writeable"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
-
-[[package]]
-name = "xmlwriter"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xmp-writer"
