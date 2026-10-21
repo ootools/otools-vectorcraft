@@ -54,8 +54,15 @@ features = [
   "Window",
 ]
 
-# 上游 workspace 没有 `[patch.crates-io]`（它的 vendor/ 只有桌面 Windows 用的
-# windows-link），所以这里不需要补补丁段。上游新增时要再确认一次。
+# 上游 workspace 里的 `[patch.crates-io]` **不会**跟着 path 依赖带过来：补丁只在
+# 发起构建的那个 workspace 根节点生效。craft-pdf 依赖打过补丁的 hayro-* 与 krilla。
+# 上游更新后要同步这里。
+[patch.crates-io]
+hayro-syntax = { git = "https://github.com/storytold/craft-libs", rev = "ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d" }
+hayro-interpret = { git = "https://github.com/storytold/craft-libs", rev = "ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d" }
+hayro-jbig2 = { git = "https://github.com/storytold/craft-libs", rev = "ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d" }
+krilla = { git = "https://github.com/storytold/craft-libs", rev = "ca50d63b773c99f96e75c77ce5a1d21e7c9cda0d" }
+
 [profile.release]
 opt-level = 3
 lto = "thin"
