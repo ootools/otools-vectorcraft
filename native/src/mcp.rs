@@ -8,7 +8,7 @@
 //! 因此原样透传，把失败交回上游给出的可读错误。
 
 use serde_json::{json, Value};
-use vectorcraft_mcp::{call_tool, tool_definitions, Headless};
+use vectorcraft_mcp::{call_tool, tool_definitions, Backend, Headless, Server};
 
 /// 宿主 `__otools_mcp_tools__` 的响应体。
 pub fn tools_payload() -> Value {
@@ -24,10 +24,91 @@ pub fn tools_payload() -> Value {
 /// （`crates/mcp/src/tests.rs: server() -> Server::new(Box::new(Headless::with_document()))`）。
 /// `new()` 的会话没有活动文档，`draw_shape` 会直接报 "no document open"；
 /// 用 `with_document()` 才与外部 AI 连上游 server 时的行为一致。
-static HEADLESS: std::sync::OnceLock<std::sync::Mutex<Headless>> = std::sync::OnceLock::new();
+static HEADLESS: std::sync::OnceLock<std::sync::Arc<std::sync::Mutex<Headless>>> =
+    std::sync::OnceLock::new();
 
-fn headless() -> &'static std::sync::Mutex<Headless> {
-    HEADLESS.get_or_init(|| std::sync::Mutex::new(Headless::with_document()))
+fn headless() -> &'static std::sync::Arc<std::sync::Mutex<Headless>> {
+    HEADLESS.get_or_init(|| std::sync::Arc::new(std::sync::Mutex::new(Headless::with_document())))
+}
+
+/// 把常驻会话包成上游 `Server` 能接受的 `Backend`。
+///
+/// `Server::new` 要求 `Box<dyn Backend>` 的所有权，交出去就再也拿不回来（会话状态
+/// 会丢）。所以每次请求都新建一个只持有 `Arc<Mutex<Headless>>` 的代理 Server：
+/// 资源模板、`{id}` 解析、percent-decoding、错误码全部由上游代码产生，适配层不再
+/// 复制一份映射——那种复制正是上游改一处、插件悄悄过期的地方。
+struct Proxy(std::sync::Arc<std::sync::Mutex<Headless>>);
+
+impl Proxy {
+    fn with<T>(&self, f: impl FnOnce(&mut Headless) -> T) -> Result<T, String> {
+        let mut guard = self
+            .0
+            .lock()
+            .map_err(|_| "headless 会话状态已损坏，请重启 OTools".to_string())?;
+        Ok(f(&mut guard))
+    }
+}
+
+impl Backend for Proxy {
+    fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
+        self.with(|h| h.call(method, params))?
+    }
+
+    fn has_ui(&self) -> bool {
+        false
+    }
+
+    fn describe(&self) -> String {
+        "otools-vectorcraft native (headless)".to_string()
+    }
+}
+
+/// 走一次上游 MCP 分发，取 `result`。
+pub fn rpc(method: &str, params: Value) -> Result<Value, String> {
+    let mut server = Server::new(Box::new(Proxy(headless().clone())));
+    let reply = server
+        .handle(json!({ "jsonrpc": "2.0", "id": 1, "method": method, "params": params }))
+        .ok_or_else(|| format!("上游对 {method} 没有应答"))?;
+    if let Some(error) = reply.get("error") {
+        let message = error
+            .get("message")
+            .and_then(Value::as_str)
+            .unwrap_or("上游返回错误");
+        return Err(message.to_string());
+    }
+    reply
+        .get("result")
+        .cloned()
+        .ok_or_else(|| format!("{method} 的应答缺少 result"))
+}
+
+/// 宿主 `__otools_mcp_resources__` 的响应体（3 个固定资源）。
+pub fn resources_payload() -> Result<Value, String> {
+    rpc("resources/list", json!({}))
+}
+
+/// 宿主 `__otools_mcp_resource_templates__`（4 个模板：object / command / effect / swatch）。
+pub fn resource_templates_payload() -> Result<Value, String> {
+    rpc("resources/templates/list", json!({}))
+}
+
+/// 宿主 `__otools_mcp_read_resource__`。模板 URI 的 `{id}` 解析与
+/// percent-decoding 都在上游完成。
+pub fn read_resource_payload(uri: &str) -> Result<Value, String> {
+    rpc("resources/read", json!({ "uri": uri }))
+}
+
+/// 宿主 `__otools_mcp_prompts__` 的响应体（上游 4 个设计工作流）。
+pub fn prompts_payload() -> Result<Value, String> {
+    rpc("prompts/list", json!({}))
+}
+
+/// 宿主 `__otools_mcp_get_prompt__` 的响应体。模板渲染与默认值都在上游。
+pub fn get_prompt_payload(name: &str, arguments: &Value) -> Result<Value, String> {
+    rpc(
+        "prompts/get",
+        json!({ "name": name, "arguments": arguments }),
+    )
 }
 
 /// 关掉会话（供宿主热更新前的停机握手调用）。
@@ -130,6 +211,125 @@ mod tests {
         assert_eq!(
             inspected["isError"], false,
             "inspect_document must see the object drawn in the previous call: {inspected}"
+        );
+    }
+
+    // ── resources ──────────────────────────────────────────────────────────
+    //
+    // 上游的 `resources/*` 与 `prompts/*` 都在 `Server::handle` 里，适配层通过
+    // Proxy 转发。这几条锁的是「转发真的通」，且 URI 模板的 {id} 解析（上游的
+    // percent-decoding 也在这里）没有在转发中丢掉。
+
+    #[test]
+    fn resources_list_matches_upstream() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let value = resources_payload().expect("resources/list");
+        let uris: Vec<&str> = value["resources"]
+            .as_array()
+            .expect("resources array")
+            .iter()
+            .filter_map(|r| r.get("uri").and_then(Value::as_str))
+            .collect();
+        assert_eq!(uris.len(), 3, "got {uris:?}");
+        for expected in [
+            "vectorcraft://document",
+            "vectorcraft://document/json",
+            "vectorcraft://commands",
+        ] {
+            assert!(uris.contains(&expected), "missing {expected} in {uris:?}");
+        }
+    }
+
+    #[test]
+    fn resource_templates_come_from_upstream() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // 上游有 4 个模板（object / command / effect / swatch）。这是 vectorcraft
+        // 与其它 craft 的关键差异：少一个就是转发链路漏了。
+        let value = resource_templates_payload().expect("resources/templates/list");
+        let templates = value
+            .get("resourceTemplates")
+            .and_then(Value::as_array)
+            .expect("resourceTemplates array");
+        let names: Vec<&str> = templates
+            .iter()
+            .filter_map(|t| t.get("name").and_then(Value::as_str))
+            .collect();
+        assert_eq!(names.len(), 4, "got {names:?}");
+        for expected in ["object", "command", "effect", "swatch"] {
+            assert!(names.contains(&expected), "missing {expected} in {names:?}");
+        }
+    }
+
+    #[test]
+    fn read_resource_round_trips_and_rejects_unknown_uri() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let contents = read_resource_payload("vectorcraft://commands")
+            .expect("read commands resource")
+            .get("contents")
+            .and_then(Value::as_array)
+            .cloned()
+            .expect("contents array");
+        let text = contents[0]
+            .get("text")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert!(!text.trim().is_empty(), "commands resource came back empty");
+
+        let error = read_resource_payload("vectorcraft://nope").expect_err("unknown uri must fail");
+        assert!(
+            error.contains("not found") || error.contains("resource"),
+            "error should say the resource is missing: {error}"
+        );
+    }
+
+    #[test]
+    fn prompts_list_matches_upstream() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let value = prompts_payload().expect("prompts/list");
+        let names: Vec<&str> = value["prompts"]
+            .as_array()
+            .expect("prompts array")
+            .iter()
+            .filter_map(|p| p.get("name").and_then(Value::as_str))
+            .collect();
+        // 上游 5 个设计工作流。
+        assert_eq!(names.len(), 5, "got {names:?}");
+        for expected in [
+            "poster",
+            "icon-set",
+            "recolor",
+            "trace-and-style",
+            "export-set",
+        ] {
+            assert!(names.contains(&expected), "missing {expected} in {names:?}");
+        }
+    }
+
+    #[test]
+    fn get_prompt_renders_messages_and_rejects_unknown_name() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // palette 有固定取值集，用其中一个，避免测试依赖上游对非法值的容忍度。
+        let rendered =
+            get_prompt_payload("recolor", &json!({"palette": "cluster"})).expect("render recolor");
+        let messages = rendered
+            .get("messages")
+            .and_then(Value::as_array)
+            .expect("messages array");
+        assert!(
+            !messages.is_empty(),
+            "rendered prompt has no messages: {rendered}"
+        );
+        let text = messages[0]
+            .pointer("/content/text")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert!(text.contains("cluster"), "argument not substituted: {text}");
+
+        let error =
+            get_prompt_payload("definitely_not_a_prompt", &json!({})).expect_err("unknown prompt");
+        assert!(
+            error.contains("unknown prompt"),
+            "error should say the prompt does not exist: {error}"
         );
     }
 }

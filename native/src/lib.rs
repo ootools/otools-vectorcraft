@@ -37,6 +37,35 @@ fn dispatch(method: &str, payload: &Value) -> Result<Value, String> {
                 .unwrap_or_else(|| json!({}));
             Ok(mcp::call_payload(name, &arguments))
         }
+        // 上游 MCP 的 resources 能力（文档 / 文档全文 / 命令目录 + 4 个 URI 模板）。
+        "__otools_mcp_resources__" => mcp::resources_payload(),
+        "__otools_mcp_resource_templates__" => mcp::resource_templates_payload(),
+        "__otools_mcp_read_resource__" => {
+            let uri = payload
+                .get("uri")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if uri.trim().is_empty() {
+                return Err("缺少资源 uri".to_string());
+            }
+            mcp::read_resource_payload(uri)
+        }
+        // 上游 MCP 的 prompts 能力（4 个设计工作流）。
+        "__otools_mcp_prompts__" => mcp::prompts_payload(),
+        "__otools_mcp_get_prompt__" => {
+            let name = payload
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            if name.trim().is_empty() {
+                return Err("缺少 prompt 名 name".to_string());
+            }
+            let arguments = payload
+                .get("arguments")
+                .cloned()
+                .unwrap_or_else(|| json!({}));
+            mcp::get_prompt_payload(name, &arguments)
+        }
         // 宿主热更新前的停机握手：释放常驻 headless 会话。
         "__otools_shutdown__" => {
             mcp::shutdown_headless();
