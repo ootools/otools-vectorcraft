@@ -1,8 +1,8 @@
 diff --git a/crates/text/src/fontdb.rs b/crates/text/src/fontdb.rs
-index 9b1c89a..dcc5e2e 100644
+index f2f9aec..1640cbd 100644
 --- a/crates/text/src/fontdb.rs
 +++ b/crates/text/src/fontdb.rs
-@@ -314,9 +314,39 @@ struct CatalogFace {
+@@ -410,9 +410,39 @@ struct CatalogFace {
  }
  
  /// The installed fonts by ASCII-lowercased family name (lookups ignore ASCII case, as
@@ -43,7 +43,7 @@ index 9b1c89a..dcc5e2e 100644
  /// The installed faces' (family, style) by normalized PostScript name ([`norm`]).
  type PostScriptNames = HashMap<String, (String, String)>;
  
-@@ -1689,6 +1719,30 @@ impl FontDb {
+@@ -2023,6 +2053,30 @@ impl FontDb {
          first.unwrap_or_else(|| self.scan_font_dirs())
      }
  
@@ -74,7 +74,7 @@ index 9b1c89a..dcc5e2e 100644
      /// Whether fonts were installed or removed since the last scan (a font folder or font file it
      /// read changed, or a new one is to be read), for [`FontDb::load_system_fonts`] to catalog
      /// them. Costs a look at each folder the scan read, not a scan. `false` before the first scan
-@@ -1919,6 +1973,15 @@ impl FontDb {
+@@ -2301,6 +2355,15 @@ impl FontDb {
                  return Some(f);
              }
          }
@@ -90,7 +90,7 @@ index 9b1c89a..dcc5e2e 100644
          found
              .or_else(|| self.find(FALLBACK_FAMILY, style))
              .or_else(|| self.find(FALLBACK_FAMILY, "Regular"))
-@@ -1968,8 +2031,8 @@ impl FontDb {
+@@ -2350,8 +2413,8 @@ impl FontDb {
          let _ = family;
      }
  
@@ -102,15 +102,15 @@ index 9b1c89a..dcc5e2e 100644
          let ns = norm(style);
          self.read_catalog().get(&family.to_ascii_lowercase()).is_some_and(|c| c.faces.iter().any(|cf| norm(&cf.style) == ns))
 diff --git a/crates/text/src/lib.rs b/crates/text/src/lib.rs
-index aef5c76..7e2e215 100644
+index ec81de5..582e37a 100644
 --- a/crates/text/src/lib.rs
 +++ b/crates/text/src/lib.rs
-@@ -31,6 +31,8 @@ pub use fontdb::{
-     FALLBACK_FAMILY, FontClass, FontDb, FontFace, FontMatch, FontTraits, IcfMargins, PlatformFontFiles, WantedFont, WantedFonts, app_font_dir,
-     is_font_file, is_suitcase, set_app_font_dir, set_platform_font_files, set_user_font_dirs, style_weight, system_font_dirs, user_font_dirs,
+@@ -39,6 +39,8 @@ pub use fontdb::{
+     is_font_file, is_suitcase, set_app_font_dir, set_platform_font_files, set_user_font_dirs, set_user_font_dirs_confined, style_weight,
+     system_font_dirs, user_font_dirs,
  };
 +#[cfg(target_arch = "wasm32")]
 +pub use fontdb::{SystemFont, take_pending_fonts};
  pub use hyphen::{hyphenation_exceptions, set_hyphenation_exceptions};
- use kurbo::{Affine, BezPath, Point, Rect, Vec2};
- pub use layout::{decorations, fit_first_line, layout, layout_with};
+ use std::sync::Arc;
+ pub use svg_glyph::{SvgGlyphReader, set_svg_glyph_reader};

@@ -1,8 +1,8 @@
 diff --git a/crates/ui-egui/src/chrome.rs b/crates/ui-egui/src/chrome.rs
-index f9af2db..d4ef012 100644
+index 1f45504..0b93291 100644
 --- a/crates/ui-egui/src/chrome.rs
 +++ b/crates/ui-egui/src/chrome.rs
-@@ -65,7 +65,6 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
+@@ -69,7 +69,6 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
              let icon = 28.0;
              let search = room >= 64.0 + 8.0 + gap + icon;
              let ws_w = ws_w.min(room - 8.0 - gap - if search { icon } else { 0.0 }).max(64.0);
@@ -10,7 +10,7 @@ index f9af2db..d4ef012 100644
              let mut rui = ui.new_child(egui::UiBuilder::new().max_rect(right).layout(egui::Layout::right_to_left(egui::Align::Center)));
              let ui = &mut rui;
              // Workspace switcher: shows the current workspace, opens Window → Workspace.
-@@ -87,10 +86,6 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
+@@ -91,10 +90,6 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                      app.ui.palette_query.clear();
                  }
              }
@@ -22,10 +22,10 @@ index f9af2db..d4ef012 100644
                  let title = ui.painter().layout_no_wrap("VectorCraft".into(), egui::FontId::proportional(13.5), t.text);
                  let title_rect = egui::Rect::from_center_size(full.center(), title.size());
 diff --git a/crates/ui-egui/src/community.rs b/crates/ui-egui/src/community.rs
-index ef63f47..cea47de 100644
+index 7ed5eb9..39a01df 100644
 --- a/crates/ui-egui/src/community.rs
 +++ b/crates/ui-egui/src/community.rs
-@@ -52,9 +52,8 @@ fn link(app: &mut VectorcraftApp, ui: &mut Ui, icon: &str, label: &str, cmd: &st
+@@ -62,9 +62,8 @@ fn link(app: &mut VectorcraftApp, ui: &mut Ui, icon: &str, label: &str, cmd: &st
      });
  }
  
@@ -37,10 +37,10 @@ index ef63f47..cea47de 100644
      let l = app.session.execute("help.links", &serde_json::json!({})).unwrap_or_default();
      let s = |k: &str| l[k].as_str().unwrap_or("").to_string();
 diff --git a/crates/ui-egui/src/menus.rs b/crates/ui-egui/src/menus.rs
-index 7f32ab4..6953a89 100644
+index 7e3f810..959ff1d 100644
 --- a/crates/ui-egui/src/menus.rs
 +++ b/crates/ui-egui/src/menus.rs
-@@ -2079,7 +2079,7 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
+@@ -2619,7 +2619,7 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
              // Quit from File, Language and Appearance synthesized). It stays first: `from_tree`
              // gives the first menu the App role.
              "VectorCraft",
@@ -49,7 +49,7 @@ index 7f32ab4..6953a89 100644
          ),
          (
              "File",
-@@ -2706,7 +2706,6 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
+@@ -3267,7 +3267,6 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
          (
              "Help",
              vec![
@@ -57,7 +57,7 @@ index 7f32ab4..6953a89 100644
                  c("ArtCraft Website", "help.website"),
                  c("VectorCraft on getartcraft.com", "help.appPage"),
                  c("VectorCraft on GitHub", "help.github"),
-@@ -3268,7 +3267,7 @@ pub fn invoke(app: &mut VectorcraftApp, id: &str, p: Value) {
+@@ -3873,7 +3872,7 @@ pub fn invoke(app: &mut VectorcraftApp, id: &str, p: Value) {
          return;
      }
      // Help links: the command returns the URL; a menu click opens it (agents just get the URL).
@@ -67,7 +67,7 @@ index 7f32ab4..6953a89 100644
          return;
      }
 diff --git a/crates/ui-egui/src/theme.rs b/crates/ui-egui/src/theme.rs
-index 1315d32..68d6451 100644
+index f355979..63b9ee9 100644
 --- a/crates/ui-egui/src/theme.rs
 +++ b/crates/ui-egui/src/theme.rs
 @@ -3,6 +3,15 @@
@@ -86,9 +86,9 @@ index 1315d32..68d6451 100644
  use serde::{Deserialize, Serialize};
  
  #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-@@ -270,6 +279,12 @@ pub fn install_fonts(ctx: &egui::Context) {
-     mono.extend(fallback);
-     fonts.families.insert(FontFamily::Name(FONT_MONO.into()), mono);
+@@ -521,6 +530,12 @@ pub fn install_fonts(ctx: &egui::Context) {
+     fonts.families.insert(FontFamily::Name(FONT_UI.into()), family(ui, &fallback));
+     fonts.families.insert(FontFamily::Name(FONT_MONO.into()), family(mono, &mono_fallback));
      add_craft_fonts(&mut fonts);
 +    for (name, data) in extra_fallback_fonts() {
 +        fonts.font_data.insert(name.clone(), data.clone());
