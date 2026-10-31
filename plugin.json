@@ -4,6 +4,16 @@
   "displayName": "VectorCraft",
   "displayNameCN": "VectorCraft",
   "entry": "dist/index.html",
+  "fileAssociations": [
+    { "ext": "vectorcraft", "desc": "VectorCraft 文档", "mime": "application/octet-stream" },
+    { "ext": "drawcraft", "desc": "DrawCraft 文档", "mime": "application/octet-stream" },
+    { "ext": "svg", "desc": "SVG 矢量图", "mime": "image/svg+xml" },
+    { "ext": "svgz", "desc": "SVG 压缩矢量图", "mime": "image/svg+xml" },
+    { "ext": "ai", "desc": "Illustrator 文档", "mime": "application/postscript" },
+    { "ext": "eps", "desc": "EPS 矢量图", "mime": "application/postscript" },
+    { "ext": "pdf", "desc": "PDF 文档", "mime": "application/pdf" },
+    { "ext": "dxf", "desc": "DXF 图形", "mime": "image/vnd.dxf" }
+  ],
   "quickDev": true,
   "hasAd": false,
   "icon": "✒️",

@@ -69,6 +69,11 @@ mod web {
                     }
                 });
             }
+            // 宿主投递的「打开方式」：系统里双击已绑定扩展名的文件 → 推进 inbox，
+            // 紧接的 app.logic 会把它当一次普通「打开」处理。
+            for file in crate::otools::drain_delivered() {
+                self.inbox.lock().unwrap_or_else(|e| e.into_inner()).push((file.name, file.bytes));
+            }
             self.app.logic(ctx);
             // 系统字体桥：应用要过的系统字体按需读进来（无宿主时整体静默）。
             crate::fontbridge::poll(ctx);
@@ -203,6 +208,11 @@ mod web {
         }) as Box<dyn FnMut()>);
         let _ = window.add_event_listener_with_callback(
             "otools-locale-changed",
+            closure.as_ref().unchecked_ref::<js_sys::Function>(),
+        );
+        // 宿主投递了文件：同一份「置位 + 请求重绘」逻辑，让下一帧的 logic 去取件。
+        let _ = window.add_event_listener_with_callback(
+            "otools-open-files-arrived",
             closure.as_ref().unchecked_ref::<js_sys::Function>(),
         );
         closure.forget();

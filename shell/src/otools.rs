@@ -49,6 +49,16 @@ extern "C" {
     /// `{name, dataBase64, forcePick}` → `{path}` 或 `null`（用户取消）。
     #[wasm_bindgen(js_namespace = vectorcraftOtools, js_name = "saveFile")]
     fn host_save_file(request: JsValue) -> js_sys::Promise;
+
+    /// 宿主投递的「打开方式」：JS 侧已把文件读成字节攒好，这里一次取走。
+    #[wasm_bindgen(js_namespace = vectorcraftOtools, js_name = "takeDelivered")]
+    fn take_delivered_raw() -> js_sys::Array;
+}
+
+/// 宿主投递来的一份文件（JS 侧已读成字节）。
+pub struct Delivered {
+    pub name: String,
+    pub bytes: Vec<u8>,
 }
 
 thread_local! {
@@ -129,6 +139,27 @@ fn open_into(title: &str, exts: &[&str], for_place: bool) {
         }
         repaint();
     });
+}
+
+/// 取走宿主投递的文件：下一帧由 `WebShell::logic` 推进 inbox，
+/// 与「文件 ▸ 打开」和拖放同一条路（`io::open_bytes` 的格式分流全都在里面）。
+///
+/// 方向与 [`deliver`] 相反：宿主在系统里双击已绑定扩展名的文件 → 投递队列 →
+/// 本函数取走 → 上游 `io::open_bytes`。
+pub fn drain_delivered() -> Vec<Delivered> {
+    let mut out = Vec::new();
+    for item in take_delivered_raw().iter() {
+        if !item.is_object() {
+            continue;
+        }
+        let name = field(&item, "name").unwrap_or_else(|| "document.svg".to_string());
+        let data = field(&item, "dataBase64").unwrap_or_default();
+        match base64_decode(&data) {
+            Ok(bytes) => out.push(Delivered { name, bytes }),
+            Err(e) => log::error!("宿主投递 {name} 失败：{e}"),
+        }
+    }
+    out
 }
 
 /// `Services::download`：把保存/导出的字节交给宿主写盘。
