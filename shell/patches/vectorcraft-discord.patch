@@ -1,8 +1,8 @@
 diff --git a/crates/ui-egui/src/chrome.rs b/crates/ui-egui/src/chrome.rs
-index 1f45504..0b93291 100644
+index dea0bd3..bdd0de7 100644
 --- a/crates/ui-egui/src/chrome.rs
 +++ b/crates/ui-egui/src/chrome.rs
-@@ -69,7 +69,6 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
+@@ -87,7 +87,6 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
              let icon = 28.0;
              let search = room >= 64.0 + 8.0 + gap + icon;
              let ws_w = ws_w.min(room - 8.0 - gap - if search { icon } else { 0.0 }).max(64.0);
@@ -10,7 +10,7 @@ index 1f45504..0b93291 100644
              let mut rui = ui.new_child(egui::UiBuilder::new().max_rect(right).layout(egui::Layout::right_to_left(egui::Align::Center)));
              let ui = &mut rui;
              // Workspace switcher: shows the current workspace, opens Window → Workspace.
-@@ -91,10 +90,6 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
+@@ -109,10 +108,6 @@ pub fn app_bar(app: &mut VectorcraftApp, ui: &mut Ui) {
                      app.ui.palette_query.clear();
                  }
              }
@@ -36,28 +36,11 @@ index 7ed5eb9..39a01df 100644
      ui.add_space(8.0);
      let l = app.session.execute("help.links", &serde_json::json!({})).unwrap_or_default();
      let s = |k: &str| l[k].as_str().unwrap_or("").to_string();
-diff --git a/crates/ui-egui/src/menus.rs b/crates/ui-egui/src/menus.rs
-index 7e3f810..959ff1d 100644
---- a/crates/ui-egui/src/menus.rs
-+++ b/crates/ui-egui/src/menus.rs
-@@ -2619,7 +2619,7 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
-             // Quit from File, Language and Appearance synthesized). It stays first: `from_tree`
-             // gives the first menu the App role.
-             "VectorCraft",
--            vec![c("About VectorCraft", "help.about"), c("Join Our Discord", "help.discord")],
-+            vec![c("About VectorCraft", "help.about")],
-         ),
-         (
-             "File",
-@@ -3267,7 +3267,6 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
-         (
-             "Help",
-             vec![
--                c("Join Our Discord", "help.discord"),
-                 c("ArtCraft Website", "help.website"),
-                 c("VectorCraft on getartcraft.com", "help.appPage"),
-                 c("VectorCraft on GitHub", "help.github"),
-@@ -3873,7 +3872,7 @@ pub fn invoke(app: &mut VectorcraftApp, id: &str, p: Value) {
+diff --git a/crates/ui-egui/src/menus/invoke.rs b/crates/ui-egui/src/menus/invoke.rs
+index 75f7462..4b0bc5f 100644
+--- a/crates/ui-egui/src/menus/invoke.rs
++++ b/crates/ui-egui/src/menus/invoke.rs
+@@ -141,7 +141,7 @@ pub fn invoke(app: &mut VectorcraftApp, id: &str, p: Value) {
          return;
      }
      // Help links: the command returns the URL; a menu click opens it (agents just get the URL).
@@ -66,8 +49,29 @@ index 7e3f810..959ff1d 100644
          app.open_link(id);
          return;
      }
+diff --git a/crates/ui-egui/src/menus/tree.rs b/crates/ui-egui/src/menus/tree.rs
+index a64821a..b49864c 100644
+--- a/crates/ui-egui/src/menus/tree.rs
++++ b/crates/ui-egui/src/menus/tree.rs
+@@ -20,7 +20,7 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
+             // Quit from File, Language and Appearance synthesized). It stays first: `from_tree`
+             // gives the first menu the App role.
+             "VectorCraft",
+-            vec![c("About VectorCraft", "help.about"), c("Join Our Discord", "help.discord")],
++            vec![c("About VectorCraft", "help.about")],
+         ),
+         (
+             "File",
+@@ -683,7 +683,6 @@ pub fn menu_tree_named(english_names: bool) -> Vec<(&'static str, Vec<Item>)> {
+         (
+             "Help",
+             vec![
+-                c("Join Our Discord", "help.discord"),
+                 c("ArtCraft Website", "help.website"),
+                 c("VectorCraft on getartcraft.com", "help.appPage"),
+                 c("VectorCraft on GitHub", "help.github"),
 diff --git a/crates/ui-egui/src/theme.rs b/crates/ui-egui/src/theme.rs
-index f355979..63b9ee9 100644
+index e6c06e5..c6e2d78 100644
 --- a/crates/ui-egui/src/theme.rs
 +++ b/crates/ui-egui/src/theme.rs
 @@ -3,6 +3,15 @@
@@ -86,7 +90,7 @@ index f355979..63b9ee9 100644
  use serde::{Deserialize, Serialize};
  
  #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-@@ -521,6 +530,12 @@ pub fn install_fonts(ctx: &egui::Context) {
+@@ -530,6 +539,12 @@ pub fn interface_fonts() -> FontDefinitions {
      fonts.families.insert(FontFamily::Name(FONT_UI.into()), family(ui, &fallback));
      fonts.families.insert(FontFamily::Name(FONT_MONO.into()), family(mono, &mono_fallback));
      add_craft_fonts(&mut fonts);
@@ -96,6 +100,6 @@ index f355979..63b9ee9 100644
 +    for stack in fonts.families.values_mut() {
 +        stack.extend(extra_fallback_fonts().iter().map(|(n, _)| n.clone()));
 +    }
-     ctx.set_fonts(fonts);
+     fonts
  }
  

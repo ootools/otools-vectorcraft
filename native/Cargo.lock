@@ -190,12 +190,12 @@ dependencies = [
 [[package]]
 name = "craft-docpath"
 version = "0.1.0"
-source = "git+https://github.com/storytold/craft-libs?rev=82a24b006eefa036b43c09a67fb9a3fbd17ffe63#82a24b006eefa036b43c09a67fb9a3fbd17ffe63"
+source = "git+https://github.com/storytold/craft-libs?rev=92d392cff132eaf53e13afff77f38b5c11b73aa0#92d392cff132eaf53e13afff77f38b5c11b73aa0"
 
 [[package]]
 name = "craft-pdf"
 version = "0.1.0"
-source = "git+https://github.com/storytold/craft-libs?rev=2eca9b3a53a98ac52efed2a27353c6a6927ead10#2eca9b3a53a98ac52efed2a27353c6a6927ead10"
+source = "git+https://github.com/storytold/craft-libs?rev=92d392cff132eaf53e13afff77f38b5c11b73aa0#92d392cff132eaf53e13afff77f38b5c11b73aa0"
 dependencies = [
  "hayro-interpret",
  "hayro-syntax",
@@ -408,13 +408,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "getrandom"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099"
+dependencies = [
+ "cfg-if",
+ "js-sys",
+ "libc",
+ "r-efi",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "gif"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee8cfcc411d9adbbaba82fb72661cc1bcca13e8bba98b364e62b2dba8f960159"
 dependencies = [
  "color_quant",
- "weezl",
+ "weezl 0.1.12",
 ]
 
 [[package]]
@@ -494,7 +507,7 @@ checksum = "9f4d0e94ddd48749f06bbe4e5389fb9799a0c45bcaf00495042076ef05e3241a"
 [[package]]
 name = "hayro-cmap"
 version = "0.1.0"
-source = "git+https://github.com/storytold/craft-libs?rev=2eca9b3a53a98ac52efed2a27353c6a6927ead10#2eca9b3a53a98ac52efed2a27353c6a6927ead10"
+source = "git+https://github.com/storytold/craft-libs?rev=92d392cff132eaf53e13afff77f38b5c11b73aa0#92d392cff132eaf53e13afff77f38b5c11b73aa0"
 dependencies = [
  "brotli",
  "hayro-postscript",
@@ -503,7 +516,7 @@ dependencies = [
 [[package]]
 name = "hayro-interpret"
 version = "0.7.0"
-source = "git+https://github.com/storytold/craft-libs?rev=2eca9b3a53a98ac52efed2a27353c6a6927ead10#2eca9b3a53a98ac52efed2a27353c6a6927ead10"
+source = "git+https://github.com/storytold/craft-libs?rev=92d392cff132eaf53e13afff77f38b5c11b73aa0#92d392cff132eaf53e13afff77f38b5c11b73aa0"
 dependencies = [
  "bitflags",
  "hayro-cmap",
@@ -521,7 +534,7 @@ dependencies = [
 [[package]]
 name = "hayro-jbig2"
 version = "0.3.0"
-source = "git+https://github.com/storytold/craft-libs?rev=2eca9b3a53a98ac52efed2a27353c6a6927ead10#2eca9b3a53a98ac52efed2a27353c6a6927ead10"
+source = "git+https://github.com/storytold/craft-libs?rev=92d392cff132eaf53e13afff77f38b5c11b73aa0#92d392cff132eaf53e13afff77f38b5c11b73aa0"
 dependencies = [
  "fearless_simd",
  "hayro-ccitt",
@@ -539,12 +552,12 @@ dependencies = [
 [[package]]
 name = "hayro-postscript"
 version = "0.1.0"
-source = "git+https://github.com/storytold/craft-libs?rev=2eca9b3a53a98ac52efed2a27353c6a6927ead10#2eca9b3a53a98ac52efed2a27353c6a6927ead10"
+source = "git+https://github.com/storytold/craft-libs?rev=92d392cff132eaf53e13afff77f38b5c11b73aa0#92d392cff132eaf53e13afff77f38b5c11b73aa0"
 
 [[package]]
 name = "hayro-syntax"
 version = "0.7.2"
-source = "git+https://github.com/storytold/craft-libs?rev=2eca9b3a53a98ac52efed2a27353c6a6927ead10#2eca9b3a53a98ac52efed2a27353c6a6927ead10"
+source = "git+https://github.com/storytold/craft-libs?rev=92d392cff132eaf53e13afff77f38b5c11b73aa0#92d392cff132eaf53e13afff77f38b5c11b73aa0"
 dependencies = [
  "flate2",
  "hayro-ccitt",
@@ -718,9 +731,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b454d911ac55068f53495488d8ccd0646eaa540c033a28ee15b07838afafb01f"
 
 [[package]]
+name = "js-sys"
+version = "0.3.107"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8dc09d2154098bbf4ef54eab6b117a3c24cbbffe94046b16ee6d6d4510584d3a"
+dependencies = [
+ "cfg-if",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "krilla"
 version = "0.8.2"
-source = "git+https://github.com/storytold/craft-libs?rev=2eca9b3a53a98ac52efed2a27353c6a6927ead10#2eca9b3a53a98ac52efed2a27353c6a6927ead10"
+source = "git+https://github.com/storytold/craft-libs?rev=92d392cff132eaf53e13afff77f38b5c11b73aa0#92d392cff132eaf53e13afff77f38b5c11b73aa0"
 dependencies = [
  "base64",
  "bumpalo",
@@ -1020,6 +1043,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "r-efi"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
 name = "rayon"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1109,6 +1138,12 @@ dependencies = [
  "linux-raw-sys",
  "windows-sys",
 ]
+
+[[package]]
+name = "rustversion"
+version = "1.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "ruzstd"
@@ -1375,7 +1410,7 @@ dependencies = [
  "flate2",
  "half",
  "quick-error",
- "weezl",
+ "weezl 0.1.12",
  "zune-jpeg",
 ]
 
@@ -1492,7 +1527,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "vectorcraft-affinity"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "crc32fast",
  "flate2",
@@ -1502,7 +1537,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-brush"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "kurbo",
  "serde",
@@ -1514,7 +1549,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-cad"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "image",
  "kurbo",
@@ -1529,7 +1564,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-color"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "kurbo",
  "moxcms",
@@ -1540,7 +1575,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-doc"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "chrono",
  "hayro-ccitt",
@@ -1557,7 +1592,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-effects"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "image",
  "kurbo",
@@ -1572,7 +1607,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-engine"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "craft-docpath",
  "flate2",
@@ -1606,7 +1641,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-eps"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "flate2",
  "hayro-ccitt",
@@ -1628,7 +1663,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-format"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "flate2",
  "rustix",
@@ -1640,7 +1675,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-geom"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "kurbo",
  "serde",
@@ -1649,7 +1684,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-mcp"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "image",
  "log",
@@ -1665,7 +1700,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-metafile"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "image",
  "kurbo",
@@ -1679,7 +1714,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-pathops"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "kurbo",
  "linesweeper",
@@ -1689,12 +1724,13 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-pdf"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "aes",
  "chrono",
  "craft-pdf",
  "flate2",
+ "getrandom",
  "image",
  "jpeg-encoder",
  "kurbo",
@@ -1712,12 +1748,12 @@ dependencies = [
  "vectorcraft-effects",
  "vectorcraft-geom",
  "vectorcraft-text",
- "weezl",
+ "weezl 0.2.1",
 ]
 
 [[package]]
 name = "vectorcraft-plugins"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1730,13 +1766,14 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-render"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "flate2",
  "gif",
  "image",
  "jpeg-encoder",
  "log",
+ "png",
  "vectorcraft-brush",
  "vectorcraft-color",
  "vectorcraft-doc",
@@ -1745,16 +1782,17 @@ dependencies = [
  "vectorcraft-text",
  "vello_common",
  "vello_cpu",
- "weezl",
+ "weezl 0.2.1",
+ "winsafe",
 ]
 
 [[package]]
 name = "vectorcraft-scriptcheck"
-version = "0.17.0"
+version = "0.19.0"
 
 [[package]]
 name = "vectorcraft-svg"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "craft-docpath",
  "flate2",
@@ -1775,7 +1813,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-text"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "harfrust",
  "icu_segmenter",
@@ -1795,7 +1833,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-three-d"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "vectorcraft-geom",
  "vectorcraft-pathops",
@@ -1803,7 +1841,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-tools"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "kurbo",
  "serde",
@@ -1818,7 +1856,7 @@ dependencies = [
 
 [[package]]
 name = "vectorcraft-trace"
-version = "0.17.0"
+version = "0.19.0"
 dependencies = [
  "image",
  "kurbo",
@@ -1865,6 +1903,50 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "wasm-bindgen"
+version = "0.2.130"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0181c14ddd6c7b8b0b0132a5f1ea2f32be0d893cd3ea97b6e3b28886b8a3d1c"
+dependencies = [
+ "cfg-if",
+ "rustversion",
+ "wasm-bindgen-macro",
+ "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-macro"
+version = "0.2.130"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e931a02a39abdbf66966fc35902b5ed58344750a70885bed4ebb3d8eaf28ed9"
+dependencies = [
+ "quote",
+ "wasm-bindgen-macro-support",
+]
+
+[[package]]
+name = "wasm-bindgen-macro-support"
+version = "0.2.130"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ca4b54280e455bd831e33a6b8e734baf432fe63fbc35c42ac14ce67a043a53a"
+dependencies = [
+ "bumpalo",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.9",
+ "wasm-bindgen-shared",
+]
+
+[[package]]
+name = "wasm-bindgen-shared"
+version = "0.2.130"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b1f9c3798725016c6ee5f2f57869ec0831e8bbc0ab0310a86e787e97f41389e"
+dependencies = [
+ "unicode-ident",
+]
 
 [[package]]
 name = "wasmi"
@@ -1923,6 +2005,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 
 [[package]]
+name = "weezl"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4ca08e5ef825b65b056d9efbd95c8750683f0a6d0466d02e96dc2e4e360f3d2"
+
+[[package]]
 name = "windows-link"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1965,6 +2053,12 @@ checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
 dependencies = [
  "windows-link",
 ]
+
+[[package]]
+name = "winsafe"
+version = "0.0.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ef0ffc427f045c0cc9ebffd6f4f91153dcd2a1547b5c3c29ee3f541e16e95c6"
 
 [[package]]
 name = "write-fonts"
@@ -2114,3 +2208,78 @@ checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
 dependencies = [
  "zune-core",
 ]
+
+[[patch.unused]]
+name = "ecolor"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "eframe"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui-wgpu"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui-winit"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui_demo_lib"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui_extras"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui_glow"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui_inspection"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui_kittest"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "egui_system_font_provider"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "emath"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "epaint"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "epaint_default_fonts"
+version = "0.37.0"
+source = "git+https://github.com/storytold/egui.git?rev=6d518fc799681571963842f95b55a6b68431b15a#6d518fc799681571963842f95b55a6b68431b15a"
+
+[[patch.unused]]
+name = "winit"
+version = "0.30.13"
+source = "git+https://github.com/storytold/winit.git?rev=a517b3846ee8457d84ee4975110bfda6797c44dc#a517b3846ee8457d84ee4975110bfda6797c44dc"

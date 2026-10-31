@@ -36,6 +36,7 @@ node scripts/smoke-mcp.mjs ..
 
 | 插件版本 | 上游标签 | 上游提交 | 打包日期 |
 | --- | --- | --- | --- |
+| 0.1.7 | v0.19.0+ | `cf0d4d4a3f66e88b4cfd6b8dc0c640ebe26dc7e7` | 2026-10-31 |
 | 0.1.6 | v0.17.0 | `43313f9451de7ab5b909801006b8881458f2bf04` | 2026-10-27 |
 | 0.1.5 | v0.13.1 | `904f0fe5227bd987d55319e89a38b4b8f046998c` | 2026-10-24 |
 | 0.1.4 | v0.13.1 | `904f0fe5227bd987d55319e89a38b4b8f046998c` | 2026-10-21 |
@@ -49,6 +50,6 @@ node scripts/fetch-upstream.mjs     # 拉取 pinned 的上游到 upstream/
 node scripts/build-wasm.mjs         # trunk build --release → dist/
 ```
 
-需要 rustc >= 1.95 与 wasm32-unknown-unknown 目标（egui 0.36 的要求）。
+需要 rustc >= 1.95 与 wasm32-unknown-unknown 目标（egui 0.37 的要求）。
 
 详细约定见 [AGENTS.md](./AGENTS.md)。

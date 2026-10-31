@@ -24,7 +24,7 @@
 
 ## 上手前必须知道的三件事
 
-- **rustc 版本**：上游 `rust-version = "1.95"`（egui 0.36 用了 1.95 才稳定的
+- **rustc 版本**：上游 `rust-version = "1.95"`（egui 0.37 用了 1.95 才稳定的
   `Vec::push_mut`）。本机 1.94 会在 `epaint` 上直接 `E0658`。
   `scripts/build-wasm.mjs` 会检查并提示。本机环境变量 `RUSTC_WRAPPER=sccache`
   指向 PATH 里的旧 rustc，会让 cargo 用错工具链——构建前 `unset RUSTC_WRAPPER`。
@@ -70,9 +70,10 @@
   构建把 UI 依赖（eframe/wgpu）也拉进来。
 - **上游源码不在 git 里**：`native/` 用 path 依赖直接吃 `../upstream/crates/mcp`，
   所以构建前必须先 `node scripts/fetch-upstream.mjs`。
-- **本仓的 native 不需要 `[patch.crates-io]`**：`vectorcraft-mcp` 的依赖里没有需要
-  补丁的 vendor 版本（designcraft / pdfcraft 则不同，见各自仓的 `native/Cargo.toml` 注释）。
-  上游依赖变化后重新确认一次即可。
+- **native 的 `[patch.crates-io]` 从上游 0.19 起必须有**：`vectorcraft-mcp` 的依赖树里
+  进了 craft-pdf，它依赖打过补丁的 hayro-* 与 krilla（少了这段 krilla 就是 crates.io
+  版，缺 `GroupColorSpace` 等新 API，实测编不过）。与上游 workspace 的 patch 段整段
+  一致地抄（树里用不到的 egui 条目 cargo 自动忽略），上游更新后要同步。
 - **进程内常驻会话**：`Headless`（`with_document()`） 存在 dylib 的 `OnceLock` 里，工具序列才有状态
   （`native/src/mcp.rs` 的 `session_state_persists_across_calls` 用例守着这条）。
 - **两个宿主 method**（宿主 spec §5.4 冻结的契约）：

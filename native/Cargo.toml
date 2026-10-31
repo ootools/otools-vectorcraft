@@ -29,18 +29,32 @@ serde_json = "1"
 # cdylib 必须可 unwind：插件 FFI 边界在插件内部捕获 panic，
 # 若 release profile 设成 abort，宿主会整体被杀（见主仓 ot-plugin-ffi 的说明）。
 # 上游 workspace 里的 `[patch.crates-io]` **不会**跟着 path 依赖带过来：补丁只在
-# 发起构建的那个 workspace 根节点生效。craft-pdf 依赖打过补丁的 hayro-* 与 krilla。
-# 上游更新后要同步这里。
-# 上游 workspace 里的 `[patch.crates-io]` **不会**跟着 path 依赖带过来：补丁只在
-# 发起构建的那个 workspace 根节点生效。craft-pdf 依赖打过补丁的 hayro-* 与 krilla。
-# 上游更新后要同步这里。
+# 发起构建的那个 workspace 根节点生效。0.19 起 mcp 的依赖树里有 craft-pdf，它
+# 依赖打过补丁的 hayro-* 与 krilla（少了这段 krilla 就是 crates.io 版，缺
+# GroupColorSpace/OutputIntent 等新 API，实测编不过）。与上游整段一致地抄：
+# 树里用不到的 egui 条目 cargo 自动忽略。上游更新后要同步 —— 见 AGENTS.md。
 [patch.crates-io]
-hayro-syntax = { git = "https://github.com/storytold/craft-libs", rev = "2eca9b3a53a98ac52efed2a27353c6a6927ead10" }
-hayro-interpret = { git = "https://github.com/storytold/craft-libs", rev = "2eca9b3a53a98ac52efed2a27353c6a6927ead10" }
-hayro-jbig2 = { git = "https://github.com/storytold/craft-libs", rev = "2eca9b3a53a98ac52efed2a27353c6a6927ead10" }
-hayro-cmap = { git = "https://github.com/storytold/craft-libs", rev = "2eca9b3a53a98ac52efed2a27353c6a6927ead10" }
-hayro-postscript = { git = "https://github.com/storytold/craft-libs", rev = "2eca9b3a53a98ac52efed2a27353c6a6927ead10" }
-krilla = { git = "https://github.com/storytold/craft-libs", rev = "2eca9b3a53a98ac52efed2a27353c6a6927ead10" }
+hayro-syntax = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-interpret = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-jbig2 = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-cmap = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-postscript = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+krilla = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+ecolor = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+emath = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+epaint = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+epaint_default_fonts = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui-winit = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui-wgpu = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_glow = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_extras = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_kittest = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_system_font_provider = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+eframe = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_demo_lib = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_inspection = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+winit = { git = "https://github.com/storytold/winit.git", rev = "a517b3846ee8457d84ee4975110bfda6797c44dc" }
 
 [profile.release]
 panic = "unwind"
