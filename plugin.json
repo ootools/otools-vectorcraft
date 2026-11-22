@@ -61,5 +61,6 @@
       "trace-and-style",
       "export-set"
     ]
-  }
+  },
+  "openSourceUrl": "https://github.com/ootools/otools-vectorcraft"
 }
