@@ -3,7 +3,7 @@
   "ssh": "git@github.com:storytold/vectorcraft.git",
   "https": "https://github.com/storytold/vectorcraft.git",
   "ref": "main",
-  "commit": "cf0d4d4a3f66e88b4cfd6b8dc0c640ebe26dc7e7",
+  "commit": "409d821751b9504d780b849b79a31233a07a22ce",
   "strategy": "shallow-fetch-pinned-commit",
   "note": "上游代码不入库。改这个 commit 并跑 node scripts/fetch-upstream.mjs 即可同步；务必用完整 SHA，保证可复现。"
 }
