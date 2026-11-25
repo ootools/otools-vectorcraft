@@ -1,156 +1,112 @@
 diff --git a/crates/text/src/fontdb.rs b/crates/text/src/fontdb.rs
-index b7efa85..7b3662b 100644
+index 67818e8..d637014 100644
 --- a/crates/text/src/fontdb.rs
 +++ b/crates/text/src/fontdb.rs
-@@ -70,6 +70,8 @@ pub(crate) use scan::file_face_names_within;
+@@ -69,6 +69,8 @@ pub(crate) use scan::file_face_names_within;
  #[cfg(test)]
  use scan::{MAX_FACES, enumerate_faces};
  pub use scan::{is_font_file, is_suitcase};
 +#[cfg(target_arch = "wasm32")]
 +pub use cache::{SystemFont, take_pending_fonts};
  pub use stylistic_sets::StylisticSet;
- use traits::Alias;
  #[cfg(test)]
+ use traits::{Alias, FaceKeys, face_names};
 diff --git a/crates/text/src/fontdb/cache.rs b/crates/text/src/fontdb/cache.rs
-index e65a98b..2a6690f 100644
+index 914a614..929b355 100644
 --- a/crates/text/src/fontdb/cache.rs
 +++ b/crates/text/src/fontdb/cache.rs
-@@ -29,8 +29,38 @@ pub(super) struct CatalogFace {
-     pub(super) created: Option<std::time::SystemTime>,
+@@ -69,3 +69,17 @@ impl<K: std::hash::Hash + Eq, V: Weight> GlyphCache<K, V> {
+         self.kept.insert(key, value);
+     }
  }
- 
-+/// One face of a system font the host listed for the wasm build
-+/// ([`FontDb::set_system_catalog`]): the family and style its `name` table declares, and the
-+/// file to read it from. The wasm build has no font folder to scan: the plugin shell reads
-+/// the bytes through the host and adds them with [`FontDb::add_font`]; until then the family
-+/// is listed in the menus and resolves to the fallback face.
++
 +#[cfg(target_arch = "wasm32")]
 +#[derive(Clone, Debug)]
 +pub struct SystemFont {
-+    pub family: String,
-+    pub style: String,
-+    pub path: String,
-+    /// Weight and italic as the style lists show them (from the style's name).
-+    pub weight: f32,
-+    pub italic: bool,
++    pub family: String, pub style: String, pub path: String, pub weight: f32, pub italic: bool,
 +}
-+
-+/// The families asked for but not loaded yet (wasm only): the shell reads their files through
-+/// the host and adds the faces, after which the lookup finds them.
++#[cfg(target_arch = "wasm32")]
++pub(super) static HOST_FONTS: std::sync::Mutex<Vec<SystemFont>> = std::sync::Mutex::new(Vec::new());
 +#[cfg(target_arch = "wasm32")]
 +pub(super) static PENDING_FONTS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
-+
-+/// The system font families asked for since the last call, not loaded yet (wasm only): the
-+/// shell reads their files through the host and adds them. Empty without a host font bridge
-+/// (a plain browser build).
 +#[cfg(target_arch = "wasm32")]
 +pub fn take_pending_fonts() -> Vec<String> {
 +    std::mem::take(&mut *PENDING_FONTS.lock().unwrap_or_else(|e| e.into_inner()))
 +}
-+
- /// The installed fonts by ASCII-lowercased family name (lookups ignore ASCII case, as
--/// [`FontDb::face`] does). Always empty on wasm, which has no system fonts.
-+/// [`FontDb::face`] does). On wasm it holds the fonts the host listed ([`FontDb::set_system_catalog`]),
-+/// as the wasm build has no font folder to scan.
- pub(super) type Catalog = HashMap<String, CatalogFamily>;
- 
- /// The installed faces' (family, style) by normalized PostScript name ([`norm`]).
 diff --git a/crates/text/src/fontdb/db.rs b/crates/text/src/fontdb/db.rs
-index 1b8d9cd..1cd9940 100644
+index f506de3..62a1cf3 100644
 --- a/crates/text/src/fontdb/db.rs
 +++ b/crates/text/src/fontdb/db.rs
-@@ -1,9 +1,7 @@
- use super::build::make_face;
- #[cfg(not(target_arch = "wasm32"))]
- use super::build::{style_italic, style_weight};
--#[cfg(not(target_arch = "wasm32"))]
--use super::cache::CatalogFace;
--use super::cache::{CanonicalNames, Catalog, GlyphCache, PostScriptNames};
-+use super::cache::{CanonicalNames, Catalog, CatalogFace, CatalogFamily, GlyphCache, PostScriptNames};
- #[cfg(not(target_arch = "wasm32"))]
- use super::dirs::confined_font_dirs;
- use super::face::{BUNDLED, FontBytes, FontFace, Instances};
-@@ -372,6 +370,30 @@ impl FontDb {
-         false
+@@ -162,6 +162,12 @@ impl FontDb {
      }
- 
-+    /// Catalog the system fonts the host listed (wasm only, where there is no font folder to
-+    /// scan). The menus list them at once; a lookup asking for one of them
-+    /// ([`FontDb::face`]) queues its family, whose files the plugin shell then reads through
-+    /// the host and adds with [`FontDb::add_font`].
+
+     /// [`FontDb::families`], shared: cheap to call every frame.
 +    #[cfg(target_arch = "wasm32")]
 +    pub fn set_system_catalog(&self, fonts: Vec<super::cache::SystemFont>) {
-+        let mut catalog = Catalog::new();
-+        for f in fonts {
-+            let entry = catalog.entry(f.family.to_ascii_lowercase()).or_insert_with(|| CatalogFamily {
-+                name: f.family.clone(),
-+                native: None,
-+                faces: Vec::new(),
-+                traits: None,
-+            });
-+            let path = std::path::Path::new(&f.path);
-+            if entry.faces.iter().any(|cf| cf.style.eq_ignore_ascii_case(&f.style) && cf.path == path) {
-+                continue;
-+            }
-+            entry.faces.push(CatalogFace { style: f.style, path: path.to_path_buf(), weight: f.weight, italic: f.italic, created: None });
-+        }
-+        *self.catalog.write().unwrap_or_else(|e| e.into_inner()) = catalog;
++        *super::cache::HOST_FONTS.lock().unwrap_or_else(|e| e.into_inner()) = fonts;
 +        self.changed();
 +    }
 +
-     #[cfg(not(target_arch = "wasm32"))]
-     fn scan_font_dirs(&self) -> usize {
-         let mut catalog = Catalog::new();
-diff --git a/crates/text/src/fontdb/lookup.rs b/crates/text/src/fontdb/lookup.rs
-index 2e6014f..579aceb 100644
---- a/crates/text/src/fontdb/lookup.rs
-+++ b/crates/text/src/fontdb/lookup.rs
-@@ -2,6 +2,8 @@
- use super::PathBuf;
- use super::build::{instanced, style_distance, style_italic, style_weight};
- use super::cache::Catalog;
-+#[cfg(target_arch = "wasm32")]
-+use super::cache::PENDING_FONTS;
- use super::face::{FALLBACK_FAMILY, FontFace, MAX_LIVE_INSTANCES, Variation, VariationAxis};
- use super::glyph_pen::{FlipPen, svg_drawn};
- #[cfg(not(target_arch = "wasm32"))]
-@@ -302,6 +304,15 @@ impl FontDb {
-                 return Some(f);
+     pub fn family_list(&self) -> Arc<[String]> {
+         // The catalog's list is the same `Arc` until it rescans (here or in its watch).
+         let installed = self.catalog.families();
+@@ -173,6 +179,8 @@ impl FontDb {
+         }
+         let mut v: Vec<String> = self.read_faces().iter().map(|f| f.family.clone()).collect();
+         v.extend(installed.iter().cloned());
++        #[cfg(target_arch = "wasm32")]
++        v.extend(super::cache::HOST_FONTS.lock().unwrap_or_else(|e| e.into_inner()).iter().map(|f| f.family.clone()));
+         v.sort_by_key(|a| a.to_lowercase());
+         v.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
+         let list: Arc<[String]> = v.into();
+@@ -261,6 +269,12 @@ impl FontDb {
+                 v.push((f.italic, f.weight, f.style));
              }
          }
-+        // wasm: the host lists the system fonts but holds no file system to read them; remember
-+        // the family so the shell reads its files through the host and adds its faces.
 +        #[cfg(target_arch = "wasm32")]
-+        if found.is_none() || self.is_cataloged(family, style) {
-+            let mut pending = PENDING_FONTS.lock().unwrap_or_else(|e| e.into_inner());
-+            if !pending.iter().any(|p| p.eq_ignore_ascii_case(family)) {
-+                pending.push(family.to_string());
++        for f in super::cache::HOST_FONTS.lock().unwrap_or_else(|e| e.into_inner()).iter().filter(|f| f.family.eq_ignore_ascii_case(family)) {
++            if !v.iter().any(|(_, _, s)| s.eq_ignore_ascii_case(&f.style)) {
++                v.push((f.italic, f.weight, f.style.clone()));
 +            }
 +        }
-         found
-             .or_else(|| self.find(FALLBACK_FAMILY, style))
-             .or_else(|| self.find(FALLBACK_FAMILY, "Regular"))
-@@ -351,8 +362,8 @@ impl FontDb {
-         let _ = family;
+         v.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.total_cmp(&b.1)).then(a.2.cmp(&b.2)));
+         v.dedup_by(|a, b| a.2 == b.2);
+         v.into_iter().map(|t| t.2).collect()
+diff --git a/crates/text/src/fontdb/lookup.rs b/crates/text/src/fontdb/lookup.rs
+index 67ec31a..d7dc4dc 100644
+--- a/crates/text/src/fontdb/lookup.rs
++++ b/crates/text/src/fontdb/lookup.rs
+@@ -89,6 +89,10 @@ impl FontDb {
+
+     /// Is `family` an installed family's own name (any ASCII case)?
+     fn is_installed(&self, family: &str) -> bool {
++        #[cfg(target_arch = "wasm32")]
++        if super::cache::HOST_FONTS.lock().unwrap_or_else(|e| e.into_inner()).iter().any(|f| f.family.eq_ignore_ascii_case(family)) {
++            return true;
++        }
+         self.catalog.family(family).is_some_and(|f| f.eq_ignore_ascii_case(family))
      }
- 
--    /// Is `style` of `family` among the installed fonts?
--    #[cfg(not(target_arch = "wasm32"))]
-+    /// Is `style` of `family` among the cataloged fonts (the ones the system font scan found,
-+    /// or the host listed on wasm)?
-     fn is_cataloged(&self, family: &str, style: &str) -> bool {
-         let ns = norm(style);
-         self.read_catalog().get(&family.to_ascii_lowercase()).is_some_and(|c| c.faces.iter().any(|cf| norm(&cf.style) == ns))
+
+@@ -336,6 +340,11 @@ impl FontDb {
+         }
+         let (family, style) = self.canonical(family, style);
+         let (family, style) = (family.as_str(), style.as_str());
++        #[cfg(target_arch = "wasm32")]
++        if !self.is_loaded(family) && super::cache::HOST_FONTS.lock().unwrap_or_else(|e| e.into_inner()).iter().any(|f| f.family.eq_ignore_ascii_case(family)) {
++            let mut pending = super::cache::PENDING_FONTS.lock().unwrap_or_else(|e| e.into_inner());
++            if !pending.iter().any(|f| f.eq_ignore_ascii_case(family)) { pending.push(family.to_string()); }
++        }
+         let found = self.find(family, style);
+         if found.as_ref().is_some_and(|f| norm(&f.style) == norm(style)) {
+             return found;
 diff --git a/crates/text/src/lib.rs b/crates/text/src/lib.rs
-index 7b70b9c..5ac5a27 100644
+index 07357a8..e0218a8 100644
 --- a/crates/text/src/lib.rs
 +++ b/crates/text/src/lib.rs
-@@ -48,6 +48,8 @@ pub use fontdb::{
-     is_generic_family, is_suitcase, set_app_font_dir, set_platform_font_files, set_user_font_dirs, set_user_font_dirs_confined, style_weight,
-     system_font_dirs, user_font_dirs,
- };
+@@ -1067,3 +1067,6 @@ mod tests;
+ #[cfg(test)]
+ #[path = "../build/web_fonts.rs"]
+ mod web_fonts_build;
++
 +#[cfg(target_arch = "wasm32")]
 +pub use fontdb::{SystemFont, take_pending_fonts};
- pub use hyphen::{hyphenation_exceptions, set_hyphenation_exceptions};
- pub use layout::{envelope_ink, layout_inputs, register_envelope_ink};
- use std::sync::Arc;

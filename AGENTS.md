@@ -104,3 +104,11 @@
   补丁没打上时构建报的是「上游没有 xx 符号」这种隔层错误）。
 - 不要在本仓库跑 `cargo build` 而不管 target：外壳是 wasm-only 的，
   宿主（x86_64）下 `main()` 只会打印一行提示，别把它当编译报错。
+
+## 2026-11-25 craft 运行时与字体目录迁移
+
+- 网页 shell 创建应用前安装 `craft::ui::shell::embed` 和 `craft::host::Host`；转发 `tick` / `raw_input`。
+- `Services::open_async/place_async` 已移除，文件选择接到 `otools::HostFiles`（Files trait）。`requests.rs` 维护高位票号，与 BrowserFiles 的票号隔离；已忘记的请求不接收迟到结果。
+- 新 `Picked::Saved` 用于保存路径，打开仍为 Contents；`pickSavePath` 只选路径，不能预写空文件。目录选择暂返回明确的 Unavailable。
+- UI fallback 用 `EmbeddedFace` 加到脚本字体列表，系统文档字体仍由 fontbridge 按需读取。`vectorcraft-sysfonts.patch` 已改为适配 craft::font_catalog，不能恢复旧 CatalogFamily 内部结构。
+- `vectorcraft-color-wheel.patch` 修复目标提交中 show_rows 使用旧作用域变量的上游编译错误，换为 Pick 参数中的 color/tgt/cms。

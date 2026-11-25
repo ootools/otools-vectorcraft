@@ -13,6 +13,9 @@
 //! 粘贴事件。它们在插件里没有意义（见 AGENTS.md 的「已知限制」）。
 //! 上游 `crates/*` 一律不改：它们按 upstream.pin 的 commit 拉取，保持原样才能干净地跟上上游。
 
+#[cfg(any(target_arch = "wasm32", test))]
+mod requests;
+
 #[cfg(target_arch = "wasm32")]
 mod otools;
 
@@ -74,7 +77,8 @@ mod web {
             for file in crate::otools::drain_delivered() {
                 self.inbox.lock().unwrap_or_else(|e| e.into_inner()).push((file.name, file.bytes));
             }
-            self.app.logic(ctx);
+            self.app.tick(ctx);
+            craft::ui::shell::embed::logic(ctx, || self.app.close_decision());
             // 系统字体桥：应用要过的系统字体按需读进来（无宿主时整体静默）。
             crate::fontbridge::poll(ctx);
             // 让插件更纯粹：吞掉所有社区/外部链接（Discord、ArtCraft 官网、上游 GitHub），
@@ -88,7 +92,8 @@ mod web {
         }
 
         fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
-            self.app.raw_input_hook(ctx, raw);
+            self.app.raw_input(ctx, raw);
+            craft::ui::shell::embed::before_input(ctx, |out| self.app.frame_input(out));
         }
 
         fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
@@ -108,8 +113,6 @@ mod web {
     fn services(inbox: Inbox, place: PlaceInbox) -> Services {
         if crate::otools::available() {
             Services {
-                open_async: Some(Box::new(crate::otools::pick_open)),
-                place_async: Some(Box::new(crate::otools::pick_place)),
                 download: Some(Box::new(|name: &str, bytes: &[u8]| crate::otools::deliver(name, bytes))),
                 inbox: Some(inbox),
                 place_inbox: Some(place),
@@ -165,14 +168,26 @@ mod web {
                     canvas,
                     options,
                     Box::new(move |cc| {
+                        let spec = craft::ui::InstallSpec::new(
+                            craft::host::target::ShellInfo::current(),
+                            std::sync::Arc::new(craft::window::system::SystemWindows),
+                        );
+                        let fonts = vectorcraft_ui_egui::ui_fonts().craft_faces(&[
+                            craft::ui::fonts::EmbeddedFace { family: "OTools CJK", style: "Regular", scripts: &["Hans", "Hant", "Jpan", "Kore"], index: 0, bytes: include_bytes!("../assets/fonts/otools-cjk-subset.ttf"), role: None },
+                            craft::ui::fonts::EmbeddedFace { family: "OTools Arabic", style: "Regular", scripts: &["Arab"], index: 0, bytes: include_bytes!("../assets/fonts/otools-arabic-subset.ttf"), role: None },
+                        ]).ui_language(&host_lang_code(&crate::otools::host_language()));
+                        craft::ui::shell::embed::install(&cc.egui_ctx, spec, &fonts).map_err(|e| e.to_string())?;
+                        let app_host = craft::host::Host::builder(craft::host::AppInfo { id: "vectorcraft", name: "VectorCraft", version: env!("CARGO_PKG_VERSION") })
+                            .i18n(vectorcraft_ui_egui::i18n::shared())
+                            .jobs(std::sync::Arc::new(craft::host::InlineJobs))
+                            .files(std::sync::Arc::new(crate::otools::HostFiles::new(cc.egui_ctx.clone())))
+                            .build();
+                        app_host.clone().install(&cc.egui_ctx);
                         let inbox: Inbox = Inbox::default();
                         let place: PlaceInbox = PlaceInbox::default();
                         let mut app = VectorcraftApp::new(Session::new(), services(inbox.clone(), place.clone()));
-                        // wasm 读不到系统字体：内嵌 CJK + 阿拉伯 fallback，否则中文/日文/阿拉伯文方框。
-                        vectorcraft_ui_egui::theme::set_extra_fallback_fonts(vec![
-                            ("otools-cjk".into(), std::sync::Arc::new(eframe::egui::FontData::from_static(include_bytes!("../assets/fonts/otools-cjk-subset.ttf")))),
-                            ("otools-arabic".into(), std::sync::Arc::new(eframe::egui::FontData::from_static(include_bytes!("../assets/fonts/otools-arabic-subset.ttf")))),
-                        ]);
+                        app.host = std::sync::Arc::new(app_host);
+                        app.adopt_context(&cc.egui_ctx);
                         // 第一次打开跟随 OTools 的界面主题（插件 webview 的
                         // prefers-color-scheme 不一定等于宿主主题）。
                         if let Some(brightness) = Brightness::parse(&crate::otools::theme()) {
@@ -221,9 +236,8 @@ mod web {
     /// 把宿主的 BCP 47 locale 映射到 VectorCraft 的界面语言代码（共享 i18n 的 `Lang`）。
     /// `lang_from_tag` 会把 `zh-CN` 正确映射成 `zh-hans`，不支持的 locale 回退英文。
     fn host_lang_code(host: &str) -> String {
-        vectorcraft_ui_egui::i18n::lang_from_tag(host)
-            .map(|l| l.code().to_string())
-            .unwrap_or_else(|| "en".to_string())
+        let i18n = vectorcraft_ui_egui::i18n::shared();
+        i18n.code(i18n.match_tag(host).unwrap_or(craft::i18n::Lang::EN)).to_string()
     }
 }
 

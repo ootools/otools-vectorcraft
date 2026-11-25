@@ -1,36 +1,25 @@
-//! OTools 宿主桥：把「文件从哪来、存到哪去」换成 OTools 宿主的对话框与磁盘读写。
-//!
-//! 上游 `apps/vectorcraft-web` 在浏览器里没有文件系统：打开靠 `<input type=file>`，
-//! 保存靠浏览器下载。OTools 宿主注入的 `window.otools` 提供了真正的系统文件对话框与
-//! `readHostFile` / `writeHostFile`（底层是宿主的 `tools_webview_read_file` /
-//! `tools_webview_write_file`，无路径白名单限制），所以本模块是插件**唯一**需要新写的
-//! Rust 代码：其余全部复用上游 crate。
-//!
-//! 与上游的对接点都在上游设计好的 `Services` 钩子上，上游源码零改动：
-//! - `Services::open_async`  —— 「文件 ▸ 打开」触发宿主打开对话框，字节进 inbox
-//! - `Services::place_async` —— 「置入」触发宿主对话框，字节进 place_inbox
-//! - `Services::download`    —— 保存/导出时把字节交给宿主写盘（错误会显示在界面上）
-//!
-//! JS 侧的实现见 `shell/index.html` 里的 `window.vectorcraftOtools`。
+//! OTools 文件服务与字体桥。框架 Files 请求通过宿主对话框异步完成，
+//! 打开答复 Contents，保存路径答复 Saved，取消与错误保留各自结果。
+//! Services::download 仍用于网页版保存/导出；JS 桥在 shell/index.html。
 
 use std::cell::RefCell;
 
 use base64::Engine as _;
 use vectorcraft_ui_egui::{
     Inbox,
-    place::{PlaceArrival, PlaceInbox},
+    place::PlaceInbox,
 };
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::js_sys;
 
 /// 「文件 ▸ 打开」的扩展名过滤，与上游 `io::open_dialog` 用的那一份一致。
-const OPEN_EXTS: &[&str] = &["ai", "svg", "svgz", "pdf", "eps", "ps", "dxf", "cdr", "sketch", "fig", "png", "jpg", "jpeg", "webp", "tiff", "psd"];
 /// 「置入」的图片/文件过滤（上游 place 分支）。
-const PLACE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "tif", "tiff", "bmp", "psd", "svg", "pdf", "ai", "eps"];
 
 #[wasm_bindgen]
 extern "C" {
+    #[wasm_bindgen(js_namespace = vectorcraftOtools, js_name = "pickSavePath")]
+    fn host_pick_save_path(request: JsValue) -> js_sys::Promise;
     #[wasm_bindgen(js_namespace = vectorcraftOtools, js_name = "available")]
     fn host_available() -> bool;
 
@@ -102,45 +91,6 @@ pub(crate) fn repaint() {
     });
 }
 
-/// `Services::open_async`：宿主打开对话框，读到的字节在下一帧由应用打开。
-pub fn pick_open() {
-    open_into("打开矢量图", OPEN_EXTS, false);
-}
-
-/// `Services::place_async`：宿主打开对话框，读到的字节在下一帧被「置入」。
-pub fn pick_place() {
-    open_into("置入文件", PLACE_EXTS, true);
-}
-
-fn open_into(title: &str, exts: &[&str], for_place: bool) {
-    let request = open_request(title, exts);
-    wasm_bindgen_futures::spawn_local(async move {
-        let files = match open_files(&request).await {
-            Ok(files) => files,
-            Err(e) => {
-                log::error!("打开失败：{e}");
-                return;
-            }
-        };
-        for (name, bytes) in files {
-            if for_place {
-                PLACE.with(|slot| {
-                    if let Some(inbox) = slot.borrow().as_ref() {
-                        inbox.lock().unwrap_or_else(|e| e.into_inner()).push(PlaceArrival { name, bytes, drop: None });
-                    }
-                });
-            } else {
-                INBOX.with(|slot| {
-                    if let Some(inbox) = slot.borrow().as_ref() {
-                        inbox.lock().unwrap_or_else(|e| e.into_inner()).push((name, bytes));
-                    }
-                });
-            }
-        }
-        repaint();
-    });
-}
-
 /// 取走宿主投递的文件：下一帧由 `WebShell::logic` 推进 inbox，
 /// 与「文件 ▸ 打开」和拖放同一条路（`io::open_bytes` 的格式分流全都在里面）。
 ///
@@ -170,7 +120,7 @@ pub fn deliver(name: &str, bytes: &[u8]) -> Result<(), String> {
     if name.trim().is_empty() {
         return Err("需要一个文件名".into());
     }
-    let request = save_request(name, &base64::engine::general_purpose::STANDARD.encode(bytes), true);
+    let request = save_request(name, &base64::engine::general_purpose::STANDARD.encode(bytes), !std::path::Path::new(name).is_absolute());
     let name = name.to_string();
     wasm_bindgen_futures::spawn_local(async move {
         match save_file(&request).await {
@@ -234,4 +184,98 @@ fn field(value: &JsValue, key: &str) -> Option<String> {
 
 fn js_error(e: JsValue) -> String {
     e.as_string().unwrap_or_else(|| format!("{e:?}"))
+}
+
+
+pub struct HostFiles {
+    browser: craft::platform::browser_files::BrowserFiles,
+    pending: std::sync::Arc<std::sync::Mutex<crate::requests::Requests<craft::host::PickRequest, craft::host::Picked>>>,
+    ctx: egui::Context,
+}
+impl HostFiles {
+    pub fn new(ctx: egui::Context) -> Self {
+        let wake = ctx.clone();
+        Self {
+            browser: craft::platform::browser_files::BrowserFiles::new(move || wake.request_repaint()),
+            pending: Default::default(), ctx,
+        }
+    }
+    fn issue(&self, request: craft::host::PickRequest) -> craft::host::PickId {
+        craft::host::PickId(self.pending.lock().unwrap_or_else(|e| e.into_inner()).issue(request))
+    }
+}
+impl craft::host::Files for HostFiles {
+    fn pick(&self, request: craft::host::PickRequest) -> craft::host::PickId {
+        if !available() { return self.browser.pick(request); }
+        let id = self.issue(request.clone());
+        if request.kind == craft::host::PickKind::Folder {
+            self.pending.lock().unwrap_or_else(|e| e.into_inner()).finish(id.0, craft::host::Picked::Unavailable("此浏览器插件暂不支持文件夹选择".into()));
+            return id;
+        }
+        if request.kind == craft::host::PickKind::Save {
+            let js = save_request(request.file_name.as_deref().unwrap_or("document.svg"), "", true);
+            let pending = self.pending.clone(); let ctx = self.ctx.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let result = match JsFuture::from(host_pick_save_path(js)).await {
+                    Ok(value) => match value.as_string().filter(|p| !p.is_empty()) {
+                        Some(path) => craft::host::Picked::Saved { path: path.into(), file_type: None },
+                        None => craft::host::Picked::Cancelled,
+                    },
+                    Err(e) => craft::host::Picked::Unavailable(js_error(e)),
+                };
+                pending.lock().unwrap_or_else(|e| e.into_inner()).finish(id.0, result);
+                ctx.request_repaint();
+            });
+            return id;
+        }
+        let extensions: Vec<&str> = request.filters.iter().flat_map(|f| f.extensions.iter().map(String::as_str)).collect();
+        let js = open_request(request.title.as_deref().unwrap_or("打开文件"), &extensions);
+        let pending = self.pending.clone(); let ctx = self.ctx.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let result = match open_files(&js).await {
+                Ok(files) if files.is_empty() => craft::host::Picked::Cancelled,
+                Ok(files) => craft::host::Picked::Contents(files),
+                Err(e) => craft::host::Picked::Unavailable(e),
+            };
+            pending.lock().unwrap_or_else(|e| e.into_inner()).finish(id.0, result);
+            ctx.request_repaint();
+        });
+        id
+    }
+    fn take_answer(&self, id: craft::host::PickId) -> Option<craft::host::Picked> {
+        if id.0 & (1 << 63) == 0 { return self.browser.take_answer(id); }
+        self.pending.lock().unwrap_or_else(|e| e.into_inner()).take_answer(id.0)
+    }
+    fn forget(&self, id: craft::host::PickId) {
+        if id.0 & (1 << 63) == 0 { self.browser.forget(id); }
+        else { self.pending.lock().unwrap_or_else(|e| e.into_inner()).forget(id.0); }
+    }
+    fn pending_pick(&self) -> Option<craft::host::PendingPick> {
+        self.pending.lock().unwrap_or_else(|e| e.into_inner()).pending().cloned()
+            .map(|request| craft::host::PendingPick { request, sheet: false })
+            .or_else(|| self.browser.pending_pick())
+    }
+    fn read(&self, path: &std::path::Path) -> Result<Vec<u8>, craft::host::FileError> { self.browser.read(path) }
+    fn write(&self, path: &std::path::Path, bytes: &[u8], intent: craft::host::WriteIntent) -> Result<bool, craft::host::FileError> {
+        if available() { deliver(&path.to_string_lossy(), bytes).map(|_| true).map_err(craft::host::FileError::Other) }
+        else { self.browser.write(path, bytes, intent) }
+    }
+    fn last_folder(&self, purpose: &str) -> Option<std::path::PathBuf> { self.browser.last_folder(purpose) }
+    fn save(&self, request: craft::host::PickRequest, bytes: Vec<u8>) -> craft::host::PickId {
+        if !available() { return self.browser.save(request, bytes); }
+        let id = self.issue(request.clone());
+        let js = save_request(request.file_name.as_deref().unwrap_or("document.svg"), &base64::engine::general_purpose::STANDARD.encode(bytes), true);
+        let pending = self.pending.clone(); let ctx = self.ctx.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let result = match save_file(&js).await {
+                Ok(Some(path)) => craft::host::Picked::Saved { path: path.into(), file_type: None },
+                Ok(None) => craft::host::Picked::Cancelled,
+                Err(e) => craft::host::Picked::Failed(e),
+            };
+            pending.lock().unwrap_or_else(|e| e.into_inner()).finish(id.0, result);
+            ctx.request_repaint();
+        }); id
+    }
+    fn can_pick(&self) -> bool { false }
+    fn browser_saves(&self) -> bool { true }
 }

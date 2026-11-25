@@ -291,6 +291,15 @@ window.vectorcraftOtools = {
          * @param {{name: string, dataBase64: string, forcePick: boolean}} request
          * @returns {Promise<{path: string}|null>}
          */
+        pickSavePath: function (request) {
+          if (!hostReady()) return fail('OTools 保存对话框不可用');
+          var req = request || {};
+          return pickSavePath(String(req.name || 'Document.svg'), req.title || '保存文件').then(function (path) {
+            if (path) { var map = loadMap(); map[path] = path; saveMap(map); }
+            return path;
+          });
+        },
+
         saveFile: function (request) {
           var req = request || {};
           var name = String(req.name || 'Document.svg');
