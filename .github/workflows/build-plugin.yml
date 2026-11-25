@@ -82,4 +82,4 @@ jobs:
           key: plugin-native-ci
 
       - name: 编译并测试 native 适配层
-        run: cargo test --release --manifest-path native/Cargo.toml
+        run: cargo test --release --locked --manifest-path native/Cargo.toml

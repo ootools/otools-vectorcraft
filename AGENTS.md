@@ -74,8 +74,10 @@
   进了 craft-pdf，它依赖打过补丁的 hayro-* 与 krilla（少了这段 krilla 就是 crates.io
   版，缺 `GroupColorSpace` 等新 API，实测编不过）。与上游 workspace 的 patch 段整段
   一致地抄（树里用不到的 egui 条目 cargo 自动忽略），上游更新后要同步。
-- **进程内常驻会话**：`Headless`（`with_document()`） 存在 dylib 的 `OnceLock` 里，工具序列才有状态
-  （`native/src/mcp.rs` 的 `session_state_persists_across_calls` 用例守着这条）。
+- **进程内常驻会话**：专用工作线程持有唯一 `Server` / `Headless::with_document()`，静态槽只存 channel 和 JoinHandle。
+  上游 0.24.1 的 Renderer 含 `Rc`，Headless 不再是 Send，不能放进全局 `Arc<Mutex<Headless>>`。
+  工具、resources 和 prompts 走同一线程；停机握手发 Stop 并 join 后才返回，避免热更新卸载时线程仍在旧库执行。
+  `native/src/mcp.rs` 的跨线程文档保持、停机重建测试守住会话生命周期。
 - **两个宿主 method**（宿主 spec §5.4 冻结的契约）：
   `__otools_mcp_tools__` → `tool_definitions()`；`__otools_mcp_call__` → `call_tool(&mut Headless, name, args)`。
 - **不做按工具名的 UI-only 过滤**：原样透传上游工具表，headless 下用不了的工具

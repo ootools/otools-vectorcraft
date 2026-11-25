@@ -9,19 +9,21 @@
 
 ## MCP
 
-插件通过宿主 MCP 网关暴露上游 `vectorcraft-mcp` 的 32 个工具、3 个资源、4 个资源模板
-和 5 个 prompt：
+插件通过宿主 MCP 网关暴露上游 `vectorcraft-mcp` 的完整工具表、4 个资源、4 个资源模板
+和 8 个 prompt：
 
 | 能力 | 内容 |
 | --- | --- |
-| tools | 32 个（`mcp.expose` 是默认勾选种子） |
-| resources | `vectorcraft://document`、`vectorcraft://document/json`、`vectorcraft://commands` |
+| tools | 全量透传上游（`mcp.expose` 是默认勾选种子） |
+| resources | `vectorcraft://document`、`vectorcraft://document/json`、`vectorcraft://commands`、`vectorcraft://commands/reference` |
 | resourceTemplates | `object/{id}`、`command/{id}`、`effect/{id}`、`swatch/{name}` |
-| prompts | `poster`、`icon-set`、`recolor`、`trace-and-style`、`export-set` |
+| prompts | `poster`、`icon-set`、`recolor`、`trace-and-style`、`export-set`、`check-spelling`、`variables-bind`、`path-tools` |
 
 资源模板的 `{id}` 解析、percent-decoding（`Brand%2040%25` 这种）和 prompt 的默认值替换
-全部在上游 `Server::handle` 里完成。适配层用 `Proxy`（`Arc<Mutex<Headless>>`）让上游
-`Server` 能拿到 `Box<dyn Backend>`，自己不留任何 URI 或模板的副本。
+全部在上游 `Server::handle` 里完成。适配层让专用线程持有唯一 `Server` 和 `Headless`，
+宿主经 channel 串行调用，工具与资源读取共享文档，不复制 URI 或模板映射。
+上游渲染缓存含 `Rc`，会话始终在该线程内创建、使用和销毁；热更新停机时等待线程退出，
+后续调用可重新建立会话。
 
 ```bash
 cargo test --release --manifest-path native/Cargo.toml

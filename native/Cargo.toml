@@ -3,7 +3,7 @@
 # 上游 `crates/mcp` 已经有完整的 headless 后端（进程内 Session，无窗口），
 # 依赖里没有 eframe/wgpu。本 crate 只做两件事：
 #   1. 把上游 `tool_definitions()` 转成宿主契约的 { tools: [...] }
-#   2. 把宿主传入的 { name, arguments } 转成上游 `call_tool(&mut Headless, ...)`
+#   2. 在专用线程内把宿主请求转交上游 `Server`，共享非 Send 的 headless 会话
 # 业务逻辑一律复用上游，不在此重写。
 #
 # 与 `shell/` 一样是**独立 workspace**：上游 workspace 是 wasm/desktop 导向，

@@ -8,64 +8,67 @@
 //! 因此原样透传，把失败交回上游给出的可读错误。
 
 use serde_json::{json, Value};
-use vectorcraft_mcp::{call_tool, tool_definitions, Backend, Headless, Server};
+use vectorcraft_mcp::{tool_definitions, Headless, Server};
 
 /// 宿主 `__otools_mcp_tools__` 的响应体。
 pub fn tools_payload() -> Value {
     json!({ "tools": tool_definitions() })
 }
 
-/// 进程内**常驻**的 headless 会话。
-///
-/// 上游 `Headless` 持有 Session，而工具序列有状态（draw_shape → inspect_document
-/// 依赖同一个 Session）。每次调用新建 `Headless` 会让第二次调用面对空会话。
-///
-/// 用 `with_document()` 而不是 `new()`：上游自己的 MCP server 就是这么建的
-/// （`crates/mcp/src/tests.rs: server() -> Server::new(Box::new(Headless::with_document()))`）。
-/// `new()` 的会话没有活动文档，`draw_shape` 会直接报 "no document open"；
-/// 用 `with_document()` 才与外部 AI 连上游 server 时的行为一致。
-static HEADLESS: std::sync::OnceLock<std::sync::Arc<std::sync::Mutex<Headless>>> =
-    std::sync::OnceLock::new();
-
-fn headless() -> &'static std::sync::Arc<std::sync::Mutex<Headless>> {
-    HEADLESS.get_or_init(|| std::sync::Arc::new(std::sync::Mutex::new(Headless::with_document())))
+enum WorkerRequest {
+    Mcp {
+        method: String,
+        params: Value,
+        reply: std::sync::mpsc::Sender<Result<Value, String>>,
+    },
+    Stop,
 }
 
-/// 把常驻会话包成上游 `Server` 能接受的 `Backend`。
-///
-/// `Server::new` 要求 `Box<dyn Backend>` 的所有权，交出去就再也拿不回来（会话状态
-/// 会丢）。所以每次请求都新建一个只持有 `Arc<Mutex<Headless>>` 的代理 Server：
-/// 资源模板、`{id}` 解析、percent-decoding、错误码全部由上游代码产生，适配层不再
-/// 复制一份映射——那种复制正是上游改一处、插件悄悄过期的地方。
-struct Proxy(std::sync::Arc<std::sync::Mutex<Headless>>);
-
-impl Proxy {
-    fn with<T>(&self, f: impl FnOnce(&mut Headless) -> T) -> Result<T, String> {
-        let mut guard = self
-            .0
-            .lock()
-            .map_err(|_| "headless 会话状态已损坏，请重启 OTools".to_string())?;
-        Ok(f(&mut guard))
-    }
+struct Worker {
+    sender: std::sync::mpsc::Sender<WorkerRequest>,
+    thread: std::thread::JoinHandle<()>,
 }
 
-impl Backend for Proxy {
-    fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
-        self.with(|h| h.call(method, params))?
-    }
+/// Headless 的渲染缓存含 Rc，必须在同一线程创建、使用和释放。
+/// 静态槽只持有可跨线程发送的请求通道；工具和 resources 共用唯一 Server。
+static WORKER: std::sync::Mutex<Option<Worker>> = std::sync::Mutex::new(None);
 
-    fn has_ui(&self) -> bool {
-        false
-    }
-
-    fn describe(&self) -> String {
-        "otools-vectorcraft native (headless)".to_string()
-    }
+fn start_worker() -> Result<Worker, String> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let thread = std::thread::Builder::new()
+        .name("vectorcraft-mcp".to_string())
+        .spawn(move || {
+            // with_document 与上游 MCP 的初始会话一致，调用者线程不接触 Headless。
+            let mut server = Server::new(Box::new(Headless::with_document()));
+            while let Ok(message) = receiver.recv() {
+                match message {
+                    WorkerRequest::Mcp {
+                        method,
+                        params,
+                        reply,
+                    } => {
+                        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            request(&mut server, &method, params)
+                        }));
+                        let result = match result {
+                            Ok(result) => result,
+                            Err(_) => {
+                                server = Server::new(Box::new(Headless::with_document()));
+                                Err("MCP 会话内部错误，已重置会话".to_string())
+                            }
+                        };
+                        let _ = reply.send(result);
+                    }
+                    WorkerRequest::Stop => break,
+                }
+            }
+        })
+        .map_err(|error| format!("无法启动 MCP 工作线程: {error}"))?;
+    Ok(Worker { sender, thread })
 }
 
-/// 走一次上游 MCP 分发，取 `result`。
-pub fn rpc(method: &str, params: Value) -> Result<Value, String> {
-    let mut server = Server::new(Box::new(Proxy(headless().clone())));
+/// 走一次上游 MCP 分发，取 result；上游继续负责参数、资源与 prompt 的解释。
+fn request(server: &mut Server, method: &str, params: Value) -> Result<Value, String> {
     let reply = server
         .handle(json!({ "jsonrpc": "2.0", "id": 1, "method": method, "params": params }))
         .ok_or_else(|| format!("上游对 {method} 没有应答"))?;
@@ -82,7 +85,30 @@ pub fn rpc(method: &str, params: Value) -> Result<Value, String> {
         .ok_or_else(|| format!("{method} 的应答缺少 result"))
 }
 
-/// 宿主 `__otools_mcp_resources__` 的响应体（3 个固定资源）。
+pub fn rpc(method: &str, params: Value) -> Result<Value, String> {
+    // 请求完成前持锁，使 shutdown 等待在途调用，并阻止新旧会话同时存活。
+    let mut slot = WORKER
+        .lock()
+        .map_err(|_| "MCP 工作线程状态已损坏".to_string())?;
+    if slot.is_none() {
+        *slot = Some(start_worker()?);
+    }
+    let worker = slot.as_ref().expect("worker initialized");
+    let (reply, response) = std::sync::mpsc::channel();
+    worker
+        .sender
+        .send(WorkerRequest::Mcp {
+            method: method.to_string(),
+            params,
+            reply,
+        })
+        .map_err(|_| "MCP 工作线程已停止".to_string())?;
+    response
+        .recv()
+        .map_err(|_| "MCP 工作线程未返回结果".to_string())?
+}
+
+/// 宿主 `__otools_mcp_resources__` 的响应体（4 个固定资源）。
 pub fn resources_payload() -> Result<Value, String> {
     rpc("resources/list", json!({}))
 }
@@ -98,7 +124,7 @@ pub fn read_resource_payload(uri: &str) -> Result<Value, String> {
     rpc("resources/read", json!({ "uri": uri }))
 }
 
-/// 宿主 `__otools_mcp_prompts__` 的响应体（上游 4 个设计工作流）。
+/// 宿主 `__otools_mcp_prompts__` 的响应体（上游 8 个设计工作流）。
 pub fn prompts_payload() -> Result<Value, String> {
     rpc("prompts/list", json!({}))
 }
@@ -111,36 +137,43 @@ pub fn get_prompt_payload(name: &str, arguments: &Value) -> Result<Value, String
     )
 }
 
-/// 关掉会话（供宿主热更新前的停机握手调用）。
-pub fn shutdown_headless() {
-    if let Some(lock) = HEADLESS.get() {
-        if let Ok(mut backend) = lock.lock() {
-            *backend = Headless::with_document();
-        }
+/// 热更新握手必须等线程退出再返回，防止卸载动态库后仍有旧代码运行。
+pub fn shutdown_headless() -> Result<(), String> {
+    let mut slot = WORKER
+        .lock()
+        .map_err(|_| "MCP 工作线程状态已损坏".to_string())?;
+    if let Some(worker) = slot.take() {
+        let _ = worker.sender.send(WorkerRequest::Stop);
+        worker
+            .thread
+            .join()
+            .map_err(|_| "MCP 工作线程异常退出".to_string())?;
     }
+    Ok(())
 }
 
-/// 宿主 `__otools_mcp_call__` 的响应体。
+/// 宿主 __otools_mcp_call__ 的响应体，保留 MCP 工具错误格式。
 pub fn call_payload(name: &str, arguments: &Value) -> Value {
-    let mut guard = match headless().lock() {
-        Ok(guard) => guard,
-        Err(_) => {
-            return json!({
-                "content": [{ "type": "text", "text": "headless 会话状态已损坏，请重启 OTools" }],
-                "isError": true
-            })
-        }
-    };
-    call_tool(&mut *guard, name, arguments).to_value()
+    rpc(
+        "tools/call",
+        json!({ "name": name, "arguments": arguments }),
+    )
+    .unwrap_or_else(|error| {
+        json!({
+            "content": [{ "type": "text", "text": error }],
+            "isError": true,
+        })
+    })
 }
+
+// MCP 用例和 FFI 停机用例共用会话，跨模块也必须串行。
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
-
-    // 这些用例共享进程内的常驻 headless 会话（这本身就是被测行为），必须串行执行。
-    static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn tools_payload_wraps_upstream_definitions() {
@@ -214,10 +247,76 @@ mod tests {
         );
     }
 
+    fn object_count() -> u64 {
+        let inspected = call_payload("doc_inspect", &json!({"depth": 0}));
+        assert_eq!(inspected["isError"], false, "{inspected}");
+        let text = inspected["content"][0]["text"]
+            .as_str()
+            .expect("document JSON");
+        let document: Value = serde_json::from_str(text).expect("document JSON");
+        document["objects"].as_u64().expect("object count")
+    }
+
+    #[test]
+    fn callers_on_different_threads_share_one_document() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        shutdown_headless().expect("stop worker");
+        let before = object_count();
+        let drawn = std::thread::spawn(|| {
+            call_payload(
+                "draw_shape",
+                &json!({"shape": "rectangle", "x": 10, "y": 10, "width": 20, "height": 20}),
+            )
+        })
+        .join()
+        .expect("drawing caller");
+        assert_eq!(drawn["isError"], false, "{drawn}");
+        let after = std::thread::spawn(object_count)
+            .join()
+            .expect("inspection caller");
+        assert_eq!(
+            after,
+            before + 1,
+            "the second caller must see the first caller's shape"
+        );
+        let resource = read_resource_payload("vectorcraft://document").expect("document resource");
+        let document: Value = serde_json::from_str(
+            resource["contents"][0]["text"]
+                .as_str()
+                .expect("document JSON"),
+        )
+        .expect("resource JSON");
+        assert_eq!(
+            document["objects"],
+            json!(after),
+            "resources and tools must share the document"
+        );
+    }
+
+    #[test]
+    fn shutdown_clears_the_document_and_allows_a_new_session() {
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        shutdown_headless().expect("stop worker");
+        let empty = object_count();
+        let drawn = call_payload(
+            "draw_shape",
+            &json!({"shape": "rectangle", "x": 10, "y": 10, "width": 20, "height": 20}),
+        );
+        assert_eq!(drawn["isError"], false, "{drawn}");
+        assert_eq!(object_count(), empty + 1);
+        shutdown_headless().expect("stop worker");
+        shutdown_headless().expect("stop worker");
+        assert_eq!(
+            object_count(),
+            empty,
+            "shutdown must release the old session"
+        );
+    }
+
     // ── resources ──────────────────────────────────────────────────────────
     //
     // 上游的 `resources/*` 与 `prompts/*` 都在 `Server::handle` 里，适配层通过
-    // Proxy 转发。这几条锁的是「转发真的通」，且 URI 模板的 {id} 解析（上游的
+    // 专用线程转发。这几条锁的是「转发真的通」，且 URI 模板的 {id} 解析（上游的
     // percent-decoding 也在这里）没有在转发中丢掉。
 
     #[test]
@@ -230,11 +329,12 @@ mod tests {
             .iter()
             .filter_map(|r| r.get("uri").and_then(Value::as_str))
             .collect();
-        assert_eq!(uris.len(), 3, "got {uris:?}");
+        assert_eq!(uris.len(), 4, "got {uris:?}");
         for expected in [
             "vectorcraft://document",
             "vectorcraft://document/json",
             "vectorcraft://commands",
+            "vectorcraft://commands/reference",
         ] {
             assert!(uris.contains(&expected), "missing {expected} in {uris:?}");
         }
@@ -292,14 +392,17 @@ mod tests {
             .iter()
             .filter_map(|p| p.get("name").and_then(Value::as_str))
             .collect();
-        // 上游 5 个设计工作流。
-        assert_eq!(names.len(), 5, "got {names:?}");
+        // 上游 0.24.1 的 8 个设计工作流。
+        assert_eq!(names.len(), 8, "got {names:?}");
         for expected in [
             "poster",
             "icon-set",
             "recolor",
             "trace-and-style",
             "export-set",
+            "check-spelling",
+            "variables-bind",
+            "path-tools",
         ] {
             assert!(names.contains(&expected), "missing {expected} in {names:?}");
         }

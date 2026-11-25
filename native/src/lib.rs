@@ -50,7 +50,7 @@ fn dispatch(method: &str, payload: &Value) -> Result<Value, String> {
             }
             mcp::read_resource_payload(uri)
         }
-        // 上游 MCP 的 prompts 能力（4 个设计工作流）。
+        // 上游 MCP 的 prompts 能力（8 个设计工作流）。
         "__otools_mcp_prompts__" => mcp::prompts_payload(),
         "__otools_mcp_get_prompt__" => {
             let name = payload
@@ -68,7 +68,7 @@ fn dispatch(method: &str, payload: &Value) -> Result<Value, String> {
         }
         // 宿主热更新前的停机握手：释放常驻 headless 会话。
         "__otools_shutdown__" => {
-            mcp::shutdown_headless();
+            mcp::shutdown_headless()?;
             Ok(json!({ "ok": true, "data": "otools-vectorcraft-native headless 会话已释放" }))
         }
         other => Err(format!("Unknown method: {other}")),
@@ -195,6 +195,7 @@ mod tests {
 
     #[test]
     fn shutdown_is_accepted() {
+        let _guard = mcp::TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let result = dispatch("__otools_shutdown__", &json!({})).unwrap();
         assert_eq!(result["ok"], true);
     }
