@@ -191,7 +191,7 @@ mod web {
                         // 第一次打开跟随 OTools 的界面主题（插件 webview 的
                         // prefers-color-scheme 不一定等于宿主主题）。
                         if let Some(brightness) = Brightness::parse(&crate::otools::theme()) {
-                            app.ui.brightness = brightness;
+                            app.session.prefs.ui_brightness = brightness.id().to_string();
                         }
                         crate::otools::install(inbox.clone(), place, cc.egui_ctx.clone());
                         // 系统字体桥：取宿主的字体目录喂进上游字体库（异步，到达后请求重绘）。
